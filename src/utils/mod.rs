@@ -1,1 +1,1 @@
-pub mod array2D;
+pub mod array_2d;

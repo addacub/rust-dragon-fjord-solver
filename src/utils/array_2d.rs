@@ -13,7 +13,7 @@ use std::mem;
 /// Creating a new `Array2D` struct
 ///
 /// ```
-/// # use dfsolver::{utils::array2D::*, array2D};
+/// # use dfsolver::{utils::array_2d::*, array2D};
 /// let array: Array2D = array2D![[1, 2, 3], [4, 5, 6], [7, 8, 9]];
 ///
 /// let expected_result: Array2D = Array2D::new(Shape { rows: Some(3), cols: Some(3) }, vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
@@ -23,7 +23,7 @@ use std::mem;
 macro_rules! array2D {
     ( $( $row_vector: tt ),* ) => {
         {
-            use $crate::utils::array2D::{ Array2D, Shape };
+            use $crate::utils::array_2d::{ Array2D, Shape };
             let mut data = Vec::new();
             let mut shape = Shape { rows: None, cols: None };
 
@@ -104,7 +104,7 @@ impl Array2D {
     /// Array indexing within the bounds of the array.
     /// 
     /// ```
-    /// # use dfsolver::{utils::array2D::*, array2D};
+    /// # use dfsolver::{utils::array_2d::*, array2D};
     /// let matrix: Array2D = array2D!([1, 2, 3], [4, 5, 6]);
     /// assert_eq!(matrix.get(0, 1), 2)
     /// ```
@@ -112,7 +112,7 @@ impl Array2D {
     /// Array indexing outside the bounds of the array
     /// 
     /// ```should_panic
-    /// # use dfsolver::{utils::array2D::*, array2D};
+    /// # use dfsolver::{utils::array_2d::*, array2D};
     /// let matrix: Array2D = array2D!([1, 2, 3], [4, 5, 6]);
     /// matrix.get(1, 4);
     /// ```
@@ -132,7 +132,7 @@ impl Array2D {
     /// Flipping along the x axis (corresponds to flipping vertically).
     ///
     /// ```
-    /// # use dfsolver::{utils::array2D::*, array2D};
+    /// # use dfsolver::{utils::array_2d::*, array2D};
     /// let mut matrix: Array2D = array2D!([1, 2, 3], [4, 5, 6], [7, 8, 9]);
     /// matrix.flip(Axes::X);
     ///
@@ -142,7 +142,7 @@ impl Array2D {
     ///
     /// Flipping along the y axis (corresponds to flipping horizontally).
     /// ```
-    /// # use dfsolver::{utils::array2D::*, array2D};
+    /// # use dfsolver::{utils::array_2d::*, array2D};
     /// let mut matrix: Array2D = array2D!([1, 2, 3], [4, 5, 6], [7, 8, 9]);
     /// matrix.flip(Axes::Y);
     ///
@@ -180,7 +180,7 @@ impl Array2D {
     /// Transposing a 2 x 4 array
     /// 
     /// ```
-    /// # use dfsolver::{utils::array2D::*, array2D};
+    /// # use dfsolver::{utils::array_2d::*, array2D};
     /// let mut matrix: Array2D = array2D!([0, 1, 2, 3], [4, 5, 6, 7]);
     /// matrix.transpose();
     /// let expected_result: Array2D = array2D!([0, 4], [1, 5], [2, 6], [3, 7]);
@@ -189,7 +189,7 @@ impl Array2D {
     /// 
     /// Calling transpose on an array which has been tranposed.
     /// ```
-    /// # use dfsolver::{utils::array2D::*, array2D};
+    /// # use dfsolver::{utils::array_2d::*, array2D};
     /// let mut matrix: Array2D = array2D!([0, 1, 2, 3], [4, 5, 6, 7]);
     /// matrix.transpose();
     /// matrix.transpose();
