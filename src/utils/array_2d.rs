@@ -92,25 +92,25 @@ impl Array2D {
     }
 
     /// Returns the element at the specified index of the `Array2D` it is called on.
-    /// 
+    ///
     /// # Arguments
     /// * `row` - The row of the desired element.
     /// * `col` - The column of the desired element.
-    /// 
+    ///
     /// # Panics!
     /// Function will if attempting to index outside the bounds of the array.
-    /// 
+    ///
     /// # Examples
     /// Array indexing within the bounds of the array.
-    /// 
+    ///
     /// ```
     /// # use dfsolver::{utils::array_2d::*, array2D};
     /// let matrix: Array2D = array2D!([1, 2, 3], [4, 5, 6]);
     /// assert_eq!(matrix.get(0, 1), 2)
     /// ```
-    /// 
+    ///
     /// Array indexing outside the bounds of the array
-    /// 
+    ///
     /// ```should_panic
     /// # use dfsolver::{utils::array_2d::*, array2D};
     /// let matrix: Array2D = array2D!([1, 2, 3], [4, 5, 6]);
@@ -120,7 +120,7 @@ impl Array2D {
         self.data[self.shape.cols.unwrap() * row + col]
     }
 
-    /// Flips a `Array2D` it is called on along the axes specified. 
+    /// Flips a `Array2D` it is called on along the axes specified.
     /// Only the data field is mutated. The shape field is left untouched.
     ///
     /// # Arguments
@@ -175,10 +175,10 @@ impl Array2D {
 
     /// Transposes the `Array2D` it is called on.
     /// Both the data field and the shape field are mutated.
-    /// 
+    ///
     /// # Examples
     /// Transposing a 2 x 4 array
-    /// 
+    ///
     /// ```
     /// # use dfsolver::{utils::array_2d::*, array2D};
     /// let mut matrix: Array2D = array2D!([0, 1, 2, 3], [4, 5, 6, 7]);
@@ -186,7 +186,7 @@ impl Array2D {
     /// let expected_result: Array2D = array2D!([0, 4], [1, 5], [2, 6], [3, 7]);
     /// assert_eq!(expected_result, matrix);
     /// ```
-    /// 
+    ///
     /// Calling transpose on an array which has been tranposed.
     /// ```
     /// # use dfsolver::{utils::array_2d::*, array2D};
@@ -195,7 +195,7 @@ impl Array2D {
     /// matrix.transpose();
     /// let expected_result: Array2D = array2D!([0, 1, 2, 3], [4, 5, 6, 7]);
     /// assert_eq!(expected_result, matrix);
-    /// 
+    ///
     pub fn transpose(&mut self) {
         // The product of M x N which gives the length of the 1D array which represents the data
         let mn = self.shape.rows.unwrap() * self.shape.cols.unwrap();
@@ -230,22 +230,49 @@ impl Array2D {
         mem::swap(&mut self.shape.cols, &mut self.shape.rows);
     }
 
-    // pub fn rotate90(matrix: Array2D, k: usize ) -> Array2D {
-    //     if k == 0 {
-    //         return matrix;
-    //     }
+    /// Rotates the `Array2D` by k x 90 degrees.
+    /// 
+    /// # Arguments
+    /// `k` - how many times the array is rotated 90 degrees
+    /// * A postive k rotates the array anti-clockwise.
+    /// * A negative k rotates the array clockwise.
+    /// 
+    /// # Examples
+    /// 
+    /// Rotating anti-clockwise
+    /// ```
+    /// # use dfsolver::{utils::array_2d::*, array2D};
+    /// let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+    /// matrix.rotate90(2);
+    /// let expected_result: Array2D = array2D!([3, 2], [1, 0]);
+    /// assert_eq!(expected_result, matrix);
+    /// ```
+    pub fn rotate90(&mut self, k: isize) {
+        let k = k % 4;
 
-    //     if k == 2 {
-    //         flip(flip(matrix, vertical), horizontal);
-    //     }
+        match k {
+            0 => return,
 
-    //     if k == 1 {
-    //         return transpose(flip(m, horizontal))
-    //     } else {
-    //         // k == 3
-    //         return flip(transpose(matrix), horizontal)
-    //     }
-    // }
+            1 | -3 => {
+                self.flip(Axes::Y);
+                self.transpose();
+            }
+
+            2 | -2 => {
+                self.flip(Axes::X);
+                self.flip(Axes::Y);
+            }
+
+            3 | -1 => {
+                self.transpose();
+                self.flip(Axes::Y)
+            },
+
+            _ => {
+                panic!("Something went wrong when trying to rotate 2D array.");
+            }
+        }
+    }
 }
 
 impl fmt::Display for Array2D {
@@ -265,11 +292,7 @@ impl fmt::Display for Array2D {
                 if col_index != 0 {
                     write!(f, ", ")?;
                 }
-                write!(
-                    f,
-                    "{}",
-                    self.get(row_index, col_index)
-                )?;
+                write!(f, "{}", self.get(row_index, col_index))?;
             }
             write!(f, "]")?;
         }
@@ -324,6 +347,105 @@ mod tests {
         matrix.transpose();
 
         let expected_result: Array2D = array2D!([0, 1, 2, 3], [4, 5, 6, 7]);
+        assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    fn test_rotate0() {
+        let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        matrix.rotate90(0);
+
+        let expected_result: Array2D = array2D!([0, 1], [2, 3]);
+        assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    fn test_rotate90() {
+        let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        matrix.rotate90(1);
+
+        let expected_result: Array2D = array2D!([1, 3], [0, 2]);
+        assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    fn test_rotate180() {
+        let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        matrix.rotate90(2);
+
+        let expected_result: Array2D = array2D!([3, 2], [1, 0]);
+        assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    fn test_rotate270() {
+        let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        matrix.rotate90(3);
+
+        let expected_result: Array2D = array2D!([2, 0], [3, 1]);
+        assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    fn test_rotate360() {
+        let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        matrix.rotate90(4);
+
+        let expected_result: Array2D = array2D!([0, 1], [2, 3]);
+        assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    fn test_rotate_minus90() {
+        let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        matrix.rotate90(-1);
+
+        let expected_result: Array2D = array2D!([2, 0], [3, 1]);
+        assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    fn test_rotate_minus180() {
+        let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        matrix.rotate90(-2);
+
+        let expected_result: Array2D = array2D!([3, 2], [1, 0]);
+        assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    fn test_rotate_minus270() {
+        let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        matrix.rotate90(-3);
+
+        let expected_result: Array2D = array2D!([1, 3], [0, 2]);
+        assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    fn test_rotate_minus360() {
+        let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        matrix.rotate90(-4);
+
+        let expected_result: Array2D = array2D!([0, 1], [2, 3]);
+        assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    fn test_rotate540() {
+        let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        matrix.rotate90(6);
+
+        let expected_result: Array2D = array2D!([3, 2], [1, 0]);
+        assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    fn test_rotate_minus540() {
+        let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        matrix.rotate90(-6);
+
+        let expected_result: Array2D = array2D!([3, 2], [1, 0]);
         assert_eq!(expected_result, matrix);
     }
 }
