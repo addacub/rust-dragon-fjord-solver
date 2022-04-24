@@ -59,7 +59,7 @@ macro_rules! array2D {
 ///
 /// * `rows` - the number of rows in the matrix (M dimension).
 /// * `cols` - the number of columns in the matrix (N dimension).
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
 pub struct Shape {
     pub rows: Option<usize>,
     pub cols: Option<usize>,
@@ -80,7 +80,7 @@ pub enum Axes {
 ///
 /// * `shape` - the shape of the M x N array where M is the number of rows, and N is the number of columns
 /// * `data` - a 1D `Vec` which holds the data of the array
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
 pub struct Array2D {
     shape: Shape,
     data: Vec<usize>,
@@ -231,14 +231,14 @@ impl Array2D {
     }
 
     /// Rotates the `Array2D` it is called on by k x 90 degrees.
-    /// 
+    ///
     /// # Arguments
     /// `k` - how many times the array is rotated 90 degrees
     /// * A postive k rotates the array anti-clockwise.
     /// * A negative k rotates the array clockwise.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// Rotating anti-clockwise
     /// ```
     /// # use dfsolver::{utils::array_2d::*, array2D};
@@ -266,7 +266,7 @@ impl Array2D {
             3 | -1 => {
                 self.transpose();
                 self.flip(Axes::Y)
-            },
+            }
 
             _ => {
                 panic!("Something went wrong when trying to rotate 2D array.");
@@ -279,16 +279,16 @@ impl ops::Add<Array2D> for Array2D {
     type Output = Array2D;
 
     /// Adds an `Array2D` to the `Array2D` it is called on element wise.
-    /// 
+    ///
     /// # Arguments
     /// `other_array` - An Array2D to be added. Both arrays must have the same dimension.
-    /// 
+    ///
     /// # Panics!
     /// Will panic if 2D arrays with different dimensions are added together.
-    /// 
+    ///
     /// # Examples
     /// Adding 2D arrays of the same dimension together:
-    /// 
+    ///
     /// ```
     /// # use dfsolver::{utils::array_2d::*, array2D};
     /// let matrix: Array2D = array2D!([0, 1, 2], [3, 4, 5]);
@@ -296,7 +296,7 @@ impl ops::Add<Array2D> for Array2D {
     /// let expected_result: Array2D = array2D!([2, 3, 4], [5, 6, 7]);
     /// assert_eq!(expected_result, matrix + matrix2);
     /// ```
-    /// 
+    ///
     /// Adding together 2D arrays with different dimensions:
     /// ```should_panic
     /// # use dfsolver::{utils::array_2d::*, array2D};
@@ -309,10 +309,18 @@ impl ops::Add<Array2D> for Array2D {
             panic!("Array dimensions must be the same for arrays to be added element wise");
         }
 
-        let new_array: Vec<usize> = self.data.iter().zip(other_array.data.iter()).map(|(a, b)| *a + *b).collect();
+        let new_array: Vec<usize> = self
+            .data
+            .iter()
+            .zip(other_array.data.iter())
+            .map(|(a, b)| *a + *b)
+            .collect();
 
         // Struct update syntax - uses values from another instance
-        Array2D { data: new_array, ..self }
+        Array2D {
+            data: new_array,
+            ..self
+        }
     }
 }
 
@@ -347,162 +355,236 @@ mod tests {
 
     #[test]
     fn flip_horizontally() {
+        // Arrange
         let mut matrix: Array2D = array2D!([1, 2, 3], [4, 5, 6], [7, 8, 9]);
+        let expected_result: Array2D = array2D!([3, 2, 1], [6, 5, 4], [9, 8, 7]);
+
+        // Act
         matrix.flip(Axes::Y);
 
-        let expected_result: Array2D = array2D!([3, 2, 1], [6, 5, 4], [9, 8, 7]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn flip_vertically() {
+        // Arrange
         let mut matrix: Array2D = array2D!([1, 2, 3], [4, 5, 6], [7, 8, 9]);
+        let expected_result: Array2D = array2D!([7, 8, 9], [4, 5, 6], [1, 2, 3]);
+
+        // Act
         matrix.flip(Axes::X);
 
-        let expected_result: Array2D = array2D!([7, 8, 9], [4, 5, 6], [1, 2, 3]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_transpose_square() {
+        // Arrange
         let mut matrix: Array2D = array2D!([1, 2, 3], [4, 5, 6], [7, 8, 9]);
+        let expected_result: Array2D = array2D!([1, 4, 7], [2, 5, 8], [3, 6, 9]);
+
+        // Act
         matrix.transpose();
 
-        let expected_result: Array2D = array2D!([1, 4, 7], [2, 5, 8], [3, 6, 9]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_transpose_rectangle() {
+        // Arrange
         let mut matrix: Array2D = array2D!([0, 1, 2, 3], [4, 5, 6, 7]);
+        let expected_result: Array2D = array2D!([0, 4], [1, 5], [2, 6], [3, 7]);
+
+        // Act
         matrix.transpose();
 
-        let expected_result: Array2D = array2D!([0, 4], [1, 5], [2, 6], [3, 7]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_transpose_tranpose() {
+        // Arrange
         let mut matrix: Array2D = array2D!([0, 1, 2, 3], [4, 5, 6, 7]);
+        let expected_result: Array2D = array2D!([0, 1, 2, 3], [4, 5, 6, 7]);
+
+        // Act
         matrix.transpose();
         matrix.transpose();
 
+        // Assert
         let expected_result: Array2D = array2D!([0, 1, 2, 3], [4, 5, 6, 7]);
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_rotate0() {
+        // Arrange
         let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let expected_result: Array2D = array2D!([0, 1], [2, 3]);
+
+        // Act
         matrix.rotate90(0);
 
-        let expected_result: Array2D = array2D!([0, 1], [2, 3]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_rotate90() {
+        // Arrange
         let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let expected_result: Array2D = array2D!([1, 3], [0, 2]);
+
+        // Act
         matrix.rotate90(1);
 
-        let expected_result: Array2D = array2D!([1, 3], [0, 2]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_rotate180() {
+        // Arragne
         let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let expected_result: Array2D = array2D!([3, 2], [1, 0]);
+
+        // Act
         matrix.rotate90(2);
 
-        let expected_result: Array2D = array2D!([3, 2], [1, 0]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_rotate270() {
+        // Arrange
         let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let expected_result: Array2D = array2D!([2, 0], [3, 1]);
+
+        // Act
         matrix.rotate90(3);
 
-        let expected_result: Array2D = array2D!([2, 0], [3, 1]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_rotate360() {
+        // Arrange
         let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let expected_result: Array2D = array2D!([0, 1], [2, 3]);
+
+        // Act
         matrix.rotate90(4);
 
-        let expected_result: Array2D = array2D!([0, 1], [2, 3]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_rotate_minus90() {
+        // Arrange
         let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let expected_result: Array2D = array2D!([2, 0], [3, 1]);
+
+        // Act
         matrix.rotate90(-1);
 
-        let expected_result: Array2D = array2D!([2, 0], [3, 1]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_rotate_minus180() {
+        // Arrange
         let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let expected_result: Array2D = array2D!([3, 2], [1, 0]);
+
+        // Act
         matrix.rotate90(-2);
 
-        let expected_result: Array2D = array2D!([3, 2], [1, 0]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_rotate_minus270() {
+        // Arrange
         let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let expected_result: Array2D = array2D!([1, 3], [0, 2]);
+
+        // Act
         matrix.rotate90(-3);
 
-        let expected_result: Array2D = array2D!([1, 3], [0, 2]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_rotate_minus360() {
+        // Arrange
         let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let expected_result: Array2D = array2D!([0, 1], [2, 3]);
+
+        // Act
         matrix.rotate90(-4);
 
-        let expected_result: Array2D = array2D!([0, 1], [2, 3]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_rotate540() {
+        //  Arrange
         let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let expected_result: Array2D = array2D!([3, 2], [1, 0]);
+
+        // Act
         matrix.rotate90(6);
 
-        let expected_result: Array2D = array2D!([3, 2], [1, 0]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_rotate_minus540() {
+        // Arrange
         let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let expected_result: Array2D = array2D!([3, 2], [1, 0]);
+
+        // Act
         matrix.rotate90(-6);
 
-        let expected_result: Array2D = array2D!([3, 2], [1, 0]);
+        // Assert
         assert_eq!(expected_result, matrix);
     }
 
     #[test]
     fn test_add_valid_shapes() {
+        // Arrange
         let matrix: Array2D = array2D!([0, 1], [2, 3]);
         let matrix2: Array2D = array2D!([0, 1], [2, 3]);
         let expected_result: Array2D = array2D!([0, 2], [4, 6]);
-        assert_eq!(expected_result, matrix + matrix2);
+
+        // Act
+        let added_matrix = matrix + matrix2;
+
+        // Assert
+        assert_eq!(expected_result, added_matrix);
     }
 
     #[test]
     #[should_panic]
     fn test_add_invalid_shapes() {
+        // Arrange
         let matrix: Array2D = array2D!([0, 1], [2, 3]);
         let matrix2: Array2D = array2D!([0, 1], [2, 3], [4, 5]);
+
+        // Act & Assert
         let _ = matrix + matrix2;
     }
 }

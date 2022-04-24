@@ -42,5 +42,4 @@ fn main() {
     let mut matrix: array_2d::Array2D = array2D![[1, 2], [3, 4]];
     matrix.rotate90(-4);
     println!("{}\n", matrix);
-
 }
