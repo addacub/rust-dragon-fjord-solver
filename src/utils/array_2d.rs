@@ -1,5 +1,5 @@
 use core::fmt;
-use std::mem;
+use std::{mem, ops};
 
 /// Creates an `Array2D` struct from a passed in array like object.
 /// The array data is stored in a 1D `vec`, and the array shape is stored in a `Shape` struct.
@@ -230,7 +230,7 @@ impl Array2D {
         mem::swap(&mut self.shape.cols, &mut self.shape.rows);
     }
 
-    /// Rotates the `Array2D` by k x 90 degrees.
+    /// Rotates the `Array2D` it is called on by k x 90 degrees.
     /// 
     /// # Arguments
     /// `k` - how many times the array is rotated 90 degrees
@@ -272,6 +272,47 @@ impl Array2D {
                 panic!("Something went wrong when trying to rotate 2D array.");
             }
         }
+    }
+}
+
+impl ops::Add<Array2D> for Array2D {
+    type Output = Array2D;
+
+    /// Adds an `Array2D` to the `Array2D` it is called on element wise.
+    /// 
+    /// # Arguments
+    /// `other_array` - An Array2D to be added. Both arrays must have the same dimension.
+    /// 
+    /// # Panics!
+    /// Will panic if 2D arrays with different dimensions are added together.
+    /// 
+    /// # Examples
+    /// Adding 2D arrays of the same dimension together:
+    /// 
+    /// ```
+    /// # use dfsolver::{utils::array_2d::*, array2D};
+    /// let matrix: Array2D = array2D!([0, 1, 2], [3, 4, 5]);
+    /// let matrix2: Array2D = array2D!([2, 2, 2], [2, 2, 2]);
+    /// let expected_result: Array2D = array2D!([2, 3, 4], [5, 6, 7]);
+    /// assert_eq!(expected_result, matrix + matrix2);
+    /// ```
+    /// 
+    /// Adding together 2D arrays with different dimensions:
+    /// ```should_panic
+    /// # use dfsolver::{utils::array_2d::*, array2D};
+    /// let matrix: Array2D = array2D!([0, 1, 2], [3, 4, 5]);
+    /// let matrix2: Array2D = array2D!([2, 2, 2, 2], [2, 2, 2, 2]);
+    /// let _ = matrix + matrix2;
+    /// ```
+    fn add(self, other_array: Array2D) -> Array2D {
+        if self.shape != other_array.shape {
+            panic!("Array dimensions must be the same for arrays to be added element wise");
+        }
+
+        let new_array: Vec<usize> = self.data.iter().zip(other_array.data.iter()).map(|(a, b)| *a + *b).collect();
+
+        // Struct update syntax - uses values from another instance
+        Array2D { data: new_array, ..self }
     }
 }
 
@@ -447,5 +488,21 @@ mod tests {
 
         let expected_result: Array2D = array2D!([3, 2], [1, 0]);
         assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    fn test_add_valid_shapes() {
+        let matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let matrix2: Array2D = array2D!([0, 1], [2, 3]);
+        let expected_result: Array2D = array2D!([0, 2], [4, 6]);
+        assert_eq!(expected_result, matrix + matrix2);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_add_invalid_shapes() {
+        let matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let matrix2: Array2D = array2D!([0, 1], [2, 3], [4, 5]);
+        let _ = matrix + matrix2;
     }
 }
