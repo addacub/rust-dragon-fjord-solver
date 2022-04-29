@@ -79,11 +79,11 @@ pub enum Axes {
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
 pub struct Array2D {
     shape: Shape,
-    data: Vec<usize>,
+    data: Vec<u8>,
 }
 
 impl Array2D {
-    pub fn new(shape: Shape, data: Vec<usize>) -> Array2D {
+    pub fn new(shape: Shape, data: Vec<u8>) -> Array2D {
         Array2D { shape, data }
     }
 
@@ -112,7 +112,7 @@ impl Array2D {
     /// let matrix: Array2D = array2D!([1, 2, 3], [4, 5, 6]);
     /// matrix.get(1, 4);
     /// ```
-    pub fn get(&self, row: usize, col: usize) -> usize {
+    pub fn get(&self, row: usize, col: usize) -> u8 {
         if row > self.shape.rows - 1 || col > self.shape.cols - 1 {
             panic!("Indexing outside bounds of array");
         }
@@ -145,7 +145,7 @@ impl Array2D {
     /// let mut matrix: Array2D = array2D!([0, 0, 0], [0, 0, 0], [0, 0, 0]);
     /// matrix.set((1, 3), 5);
     /// ```
-    pub fn set(&mut self, (row, col): (usize, usize), new_value: usize) {
+    pub fn set(&mut self, (row, col): (usize, usize), new_value: u8) {
         if row > self.shape.rows - 1 || col > self.shape.cols - 1 {
             panic!("Indexing outside bounds of array");
         }
@@ -154,7 +154,7 @@ impl Array2D {
     }
 
     /// Returns a immutable reference to the data array of the `Array2D` it is called on.
-    pub fn data(&self) -> &Vec<usize> {
+    pub fn data(&self) -> &Vec<u8> {
         &self.data
     }
 
@@ -164,7 +164,7 @@ impl Array2D {
     }
 
     /// Returns a mutable reference to the data array of the `Array2D` it is called on.
-    pub fn get_mut_data(&mut self) -> &mut Vec<usize> {
+    pub fn get_mut_data(&mut self) -> &mut Vec<u8> {
         &mut self.data
     }
 
@@ -321,7 +321,7 @@ impl Array2D {
         }
     }
 
-    pub fn append_array2D(&mut self, mut other: Array2D, axes: Axes) {
+    pub fn append_array(&mut self, mut other: Array2D, axes: Axes) {
         match axes {
             Axes::X => {
                 if self.shape.cols == other.shape().cols {
@@ -336,7 +336,7 @@ impl Array2D {
             }
             Axes::Y => {
                 if self.shape.rows == other.shape().rows {
-                    let mut new_array: Vec<usize> = Vec::new();
+                    let mut new_array: Vec<u8> = Vec::new();
 
                     for row_index in 0..self.shape.rows {
                         let mut new_row_self = self.data[row_index * self.shape.cols
@@ -398,7 +398,7 @@ impl ops::Add<Array2D> for Array2D {
             panic!("Array dimensions must be the same for arrays to be added element wise");
         }
 
-        let new_array: Vec<usize> = self
+        let new_array: Vec<u8> = self
             .data
             .iter()
             .zip(other_array.data.iter())
@@ -728,7 +728,7 @@ mod tests {
         let expected_result: Array2D = array2D!([0, 1], [2, 3], [0, 1], [2, 3], [4, 5]);
 
         // Act
-        matrix.append_array2D(matrix2, Axes::X);
+        matrix.append_array(matrix2, Axes::X);
 
         // Assert
         assert_eq!(expected_result, matrix);
@@ -742,7 +742,7 @@ mod tests {
         let matrix2: Array2D = array2D!([0, 1], [2, 3], [4, 5]);
 
         // Act & Assert
-        matrix.append_array2D(matrix2, Axes::X);
+        matrix.append_array(matrix2, Axes::X);
     }
 
     #[test]
@@ -766,8 +766,7 @@ mod tests {
         );
 
         // Act
-        matrix.append_array2D(matrix2, Axes::Y);
-        println!("{}", matrix);
+        matrix.append_array(matrix2, Axes::Y);
 
         // Assert
         assert_eq!(expected_result, matrix);
@@ -782,6 +781,6 @@ mod tests {
         let matrix2: Array2D = array2D!([0, 1], [2, 3], [4, 5]);
 
         // Act & Assert
-        matrix.append_array2D(matrix2, Axes::X);
+        matrix.append_array(matrix2, Axes::X);
     }
 }

@@ -331,13 +331,10 @@ mod tests {
             true,
         );
 
-        println!("{}\n", piece.current_orientation);
-
         // ACt
         let mut i = 0;
         while i < 8 {
             piece.change_orientation();
-            println!("{}\n", piece.current_orientation);
             i += 1;
         }
 
