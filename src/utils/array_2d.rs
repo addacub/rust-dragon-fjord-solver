@@ -135,7 +135,7 @@ impl Array2D {
     /// ```
     /// # use dfsolver::{utils::array_2d::*, array2D};
     /// let mut matrix: Array2D = array2D!([0, 0, 0], [0, 0, 0], [0, 0, 0]);
-    /// matrix.set(1, 1, 5);
+    /// matrix.set((1, 1), 5);
     /// assert_eq!(5, matrix.get(1, 1));
     /// ```
     ///
@@ -143,9 +143,9 @@ impl Array2D {
     /// ```should_panic
     /// # use dfsolver::{utils::array_2d::*, array2D};
     /// let mut matrix: Array2D = array2D!([0, 0, 0], [0, 0, 0], [0, 0, 0]);
-    /// matrix.set(1, 3, 5);
+    /// matrix.set((1, 3), 5);
     /// ```
-    pub fn set(&mut self, row: usize, col: usize, new_value: usize) {
+    pub fn set(&mut self, (row, col): (usize, usize), new_value: usize) {
         if row > self.shape.rows - 1 || col > self.shape.cols - 1 {
             panic!("Indexing outside bounds of array");
         }
@@ -161,6 +161,11 @@ impl Array2D {
     /// Returns a immutable reference to the shape of `Array2D` it is called on.
     pub fn shape(&self) -> &Shape {
         &self.shape
+    }
+
+    /// Returns a mutable reference to the data array of the `Array2D` it is called on.
+    pub fn get_mut_data(&mut self) -> &mut Vec<usize> {
+        &mut self.data
     }
 
     /// Flips a `Array2D` it is called on along the axes specified.
@@ -315,6 +320,48 @@ impl Array2D {
             }
         }
     }
+
+    pub fn append_array2D(&mut self, mut other: Array2D, axes: Axes) {
+        match axes {
+            Axes::X => {
+                if self.shape.cols == other.shape().cols {
+                    self.data.append(&mut other.get_mut_data());
+                    self.shape = Shape {
+                        rows: self.shape.rows + other.shape().rows,
+                        cols: self.shape.cols,
+                    }
+                } else {
+                    panic!("Tried to append Array2D with different row dimension.")
+                }
+            }
+            Axes::Y => {
+                if self.shape.rows == other.shape().rows {
+                    let mut new_array: Vec<usize> = Vec::new();
+
+                    for row_index in 0..self.shape.rows {
+                        let mut new_row_self = self.data[row_index * self.shape.cols
+                            ..row_index * self.shape.cols + self.shape.cols]
+                            .to_vec();
+
+                        let mut new_row_other = other.data[row_index * other.shape.cols
+                            ..row_index * other.shape.cols + other.shape.cols]
+                            .to_vec();
+
+                        new_row_self.append(&mut new_row_other);
+                        new_array.append(&mut new_row_self);
+                    }
+
+                    self.data = new_array;
+                    self.shape = Shape {
+                        rows: self.shape.rows,
+                        cols: self.shape.cols + other.shape().cols,
+                    }
+                } else {
+                    panic!("Tried to append Array2D with different column dimension.")
+                }
+            }
+        }
+    }
 }
 
 impl ops::Add<Array2D> for Array2D {
@@ -423,7 +470,7 @@ mod tests {
         let mut matrix: Array2D = array2D!([0, 0, 0], [0, 0, 0], [0, 0, 0]);
 
         // Act
-        matrix.set(1, 1, 5);
+        matrix.set((1, 1), 5);
 
         // Assert
         assert_eq!(5, matrix.get(1, 1));
@@ -436,7 +483,7 @@ mod tests {
         let mut matrix: Array2D = array2D!([0, 0, 0], [0, 0, 0], [0, 0, 0]);
 
         // Act
-        matrix.set(1, 3, 5);
+        matrix.set((1, 3), 5);
     }
 
     #[test]
@@ -671,5 +718,70 @@ mod tests {
 
         // Act & Assert
         let _ = matrix + matrix2;
+    }
+
+    #[test]
+    fn test_append_array_axes_x() {
+        // Arrange
+        let mut matrix: Array2D = array2D!([0, 1], [2, 3]);
+        let matrix2: Array2D = array2D!([0, 1], [2, 3], [4, 5]);
+        let expected_result: Array2D = array2D!([0, 1], [2, 3], [0, 1], [2, 3], [4, 5]);
+
+        // Act
+        matrix.append_array2D(matrix2, Axes::X);
+
+        // Assert
+        assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_append_array_axes_x_invalid() {
+        // Arrange
+        let mut matrix: Array2D = array2D!([0, 1, 0], [2, 3, 0]);
+        let matrix2: Array2D = array2D!([0, 1], [2, 3], [4, 5]);
+
+        // Act & Assert
+        matrix.append_array2D(matrix2, Axes::X);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_append_array_axes_y() {
+        // Arrange
+        let mut matrix: Array2D = array2D!(
+            [0, 1],
+            [2, 3],
+            [1, 2]
+        );
+        let matrix2: Array2D = array2D!(
+            [0, 1, 0],
+            [2, 3, 0],
+            [4, 5, 0]
+        );
+        let expected_result: Array2D = array2D!(
+            [0, 1, 0, 1, 0],
+            [2, 3, 2, 3, 0],
+            [1, 2, 4, 5, 0]
+        );
+
+        // Act
+        matrix.append_array2D(matrix2, Axes::Y);
+        println!("{}", matrix);
+
+        // Assert
+        assert_eq!(expected_result, matrix);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    #[should_panic]
+    fn test_append_array_axes_y_invalid() {
+        // Arrange
+        let mut matrix: Array2D = array2D!([0, 1, 0], [2, 3, 0]);
+        let matrix2: Array2D = array2D!([0, 1], [2, 3], [4, 5]);
+
+        // Act & Assert
+        matrix.append_array2D(matrix2, Axes::X);
     }
 }
