@@ -3,6 +3,8 @@ use crate::{
     utils::array_2d::{Array2D, Shape},
 };
 
+use crate::utils::memento::*;
+
 use super::piece::PieceModel;
 
 /// Creates an empty calendar (i.e. board with no puzzles placed and no date selected)
@@ -92,6 +94,14 @@ impl BoardModel {
 
         // Valid move
         true
+    }
+
+    fn generate_memento(&self) -> Box<Memento> {
+        Box::new(Memento::new(self.board_layout.clone()))
+    }
+
+    fn restore_from_memento(&mut self, memento: Memento) {
+        self.board_layout = memento.get_state();
     }
 }
 
