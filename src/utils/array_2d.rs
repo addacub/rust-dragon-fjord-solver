@@ -145,7 +145,8 @@ impl Array2D {
     /// let mut matrix: Array2D = array2D!([0, 0, 0], [0, 0, 0], [0, 0, 0]);
     /// matrix.set((1, 3), 5);
     /// ```
-    pub fn set(&mut self, (row, col): (usize, usize), new_value: u8) {
+    pub fn set(&mut self, board_position: (usize, usize), new_value: u8) {
+        let (row, col) = board_position;
         if row > self.shape.rows - 1 || col > self.shape.cols - 1 {
             panic!("Indexing outside bounds of array");
         }

@@ -42,7 +42,8 @@ impl BoardModel {
     /// # Arguments
     /// * `board_pos` - A tuple of the row and column position in which to place the puzzle piece
     /// * `piece_model` - The model of the puzzle piece in the current orientation to be placed onto the board.
-    pub fn is_piece_valid(&self, (row, col): (usize, usize), piece_model: PieceModel) -> bool {
+    pub fn is_piece_valid(&self, board_position: (usize, usize), piece_model: PieceModel) -> bool {
+        let (row, col) = board_position;
         // Check if translated board position (to take into account for spaces in puzzle piece)
         // is within bounds of the board.
         if piece_model.translation_count() > col {
@@ -65,7 +66,7 @@ impl BoardModel {
         }
 
         // Check if piece will leave any holes
-        if is_unreachable_holes(new_board_layout) {
+        if is_unreachable_holes(&new_board_layout) {
             return false;
         }
 
@@ -121,7 +122,7 @@ fn get_calendar_position(
 }
 
 /// Returns the next empty board position to place a puzzle piece on.
-pub fn next_board_position(board_layout: Array2D) -> (usize, usize) {
+pub fn next_board_position(board_layout: &Array2D) -> (usize, usize) {
     for (index, &item) in board_layout.data().iter().enumerate() {
         if item == 0 {
             let (row, col) = (
@@ -155,7 +156,8 @@ pub fn is_board_complete(board_layout: &Array2D) -> bool {
 ///
 /// # Panics!
 /// If the specified board position results in the puzzle piece going outside of the board's bounds.
-pub fn place_piece_on_board((row, col): (usize, usize), piece_model: &PieceModel) -> Array2D {
+pub fn place_piece_on_board(board_position: (usize, usize), piece_model: &PieceModel) -> Array2D {
+    let (row, col) = board_position;
     // Check matrix is within bounds of the board for given board position
     if row + piece_model.current_orientation().shape().rows - 1 > 6
         || col + piece_model.current_orientation().shape().cols - 1 > 6
@@ -180,19 +182,71 @@ pub fn place_piece_on_board((row, col): (usize, usize), piece_model: &PieceModel
 
 /// Determines if current layout contains any unreachable holes.
 /// * A unreachable hole cannot be filled by a puzzle piece and indicates a dead solution branch.
-fn is_unreachable_holes(board_layout: Array2D) -> bool {
+fn is_unreachable_holes(board_layout: &Array2D) -> bool {
     // Test if there are any holes first
     if is_board_complete(&board_layout) {
         // Board is complete and piece is valid.
         return false;
     }
 
-    let (row, col) = next_board_position(board_layout);
+    let board_position = next_board_position(board_layout);
+    let tested_holes: Vec<(usize, usize)> = Vec::new();
+    let mut other_holes: Vec<(usize, usize)> = Vec::new();
+    other_holes.push(board_position.clone());
 
-    return true;
+    unreachable_hole_recursive_helper(board_position, &board_layout, other_holes, tested_holes)
+}
+
+/// Recursivley calls self to determine if next board position is unreachable.
+/// * If there are more than 5 adjacent holes, next board position is reachable.
+/// * If there are less than 5 adjacent holes, next board position is unreachable and current board layout is invalid.
+///
+/// # Arguments
+/// * `board_position` - A tuple `(usize, usize)` which specifies the row and column being evaluated.
+/// * `board_layout` - An `Array2D` of the current board layout being evaluated.
+/// * `other_holes` - A `vec<(usize, usize)>` of adjacent holes which are to be tested.
+/// * `tested_holes` - A `vec<(usize, usize)>` of adjacent holes which have been tested.
+fn unreachable_hole_recursive_helper(
+    board_position: (usize, usize),
+    board_layout: &Array2D,
+    mut other_holes: Vec<(usize, usize)>,
+    mut tested_holes: Vec<(usize, usize)>,
+) -> bool {
+    let mut more_holes: Vec<(usize, usize)> = Vec::new();
+
+    for hole in &other_holes {
+        if !tested_holes.contains(hole) {
+            let neighbours = get_neighbours(hole.clone(), board_layout.clone());
+            more_holes.append(&mut evaluate_neighbours(hole.clone(), neighbours));
+            tested_holes.push(hole.clone());
+        }
+    }
+
+    other_holes.append(&mut more_holes);
+    other_holes.sort();
+    other_holes.dedup();
+
+    if tested_holes.len() > 5 {
+        // Tested more than 5 adjacent holes which means hole isn't unreachable
+        return false;
+    } else if tested_holes.len() == other_holes.len() {
+        // Tested all holes which is less than 5. Hole is unreachable.
+        return true;
+    } else {
+        return unreachable_hole_recursive_helper(
+            board_position,
+            board_layout,
+            other_holes,
+            tested_holes,
+        );
+    }
 }
 
 /// Returns a matrix of adjacent neighbours at the specified board position.
+///
+/// # Arguments
+/// * `(row, col)` - A tuple corresponding to the row and column of the specified board position.
+/// * `board_layout` - An `Array2D` of the current board layout to return the neighbours from.
 fn get_neighbours((mut row, mut col): (usize, usize), mut board_layout: Array2D) -> Array2D {
     // Check if board position is on top or bottom of board
     if row == 0 || row == board_layout.shape().rows - 1 {
@@ -201,7 +255,7 @@ fn get_neighbours((mut row, mut col): (usize, usize), mut board_layout: Array2D)
                 rows: 1,
                 cols: board_layout.shape().cols,
             },
-            vec![0; board_layout.shape().cols],
+            vec![1; board_layout.shape().cols],
         );
 
         // Check if board position is on top row
@@ -221,7 +275,7 @@ fn get_neighbours((mut row, mut col): (usize, usize), mut board_layout: Array2D)
                 rows: board_layout.shape().rows,
                 cols: 1,
             },
-            vec![0; board_layout.shape().rows],
+            vec![1; board_layout.shape().rows],
         );
 
         // Check if board position is on left side
@@ -250,6 +304,35 @@ fn get_neighbours((mut row, mut col): (usize, usize), mut board_layout: Array2D)
     }
 
     Array2D::new(Shape { rows: 3, cols: 3 }, neighbours)
+}
+
+/// Returns a list of adjacent holes to be tested.
+///
+/// # Arguments
+/// * `(row, col)` - A tuple corresponding to the row and column of the board position being evaulated.
+/// * `neighbours` - An `Array2D` of the neighbours around the specified board position being evaulated.
+fn evaluate_neighbours(board_position: (usize, usize), neighbours: Array2D) -> Vec<(usize, usize)> {
+    let (row, col) = board_position;
+    let (row, col): (i8, i8) = (row.try_into().unwrap(), col.try_into().unwrap());
+    // let row_offset = if row == 0 { 0 } else { 1 };
+    // let col_offset = if col == 0 { 0 } else { 1 };
+
+    let mut other_holes: Vec<(usize, usize)> = Vec::new();
+
+    for row_index in 0..neighbours.shape().rows {
+        for col_index in 0..neighbours.shape().cols {
+            if (row_index + col_index) % 2 != 0 {
+                // If holse at this position, write to other_holes
+                if neighbours.get(row_index, col_index) == 0 {
+                    let new_row: i8 = row + (row_index as i8 - 1);
+                    let new_col: i8 = col + (col_index as i8 - 1);
+                    other_holes.push((new_row as usize, new_col as usize))
+                }
+            }
+        }
+    }
+
+    return other_holes;
 }
 
 #[cfg(test)]
@@ -288,7 +371,7 @@ mod tests {
         );
 
         // Act
-        let (row, col) = next_board_position(test_board_layout);
+        let (row, col) = next_board_position(&test_board_layout);
 
         // Assert
         assert_eq!((3, 0), (row, col));
@@ -309,7 +392,7 @@ mod tests {
         );
 
         // Act & Assert
-        let (_, _) = next_board_position(test_board_layout);
+        let (_, _) = next_board_position(&test_board_layout);
     }
 
     #[test]
@@ -430,7 +513,7 @@ mod tests {
 
     #[test]
     #[rustfmt::skip::macros(array2D)]
-    fn test_get_neighbours_top_LHCorner() {
+    fn test_get_neighbours_top_lhcorner() {
         // Arrange
         let board_position = (0, 0);
         let board_layout = array2D!(
@@ -443,9 +526,9 @@ mod tests {
             [0, 0, 0, 0, 0, 0, 0]
         );
         let expected_result: Array2D = array2D!(
-            [0, 0, 0],
-            [0, 5, 1],
-            [0, 0, 0]
+            [1, 1, 1],
+            [1, 5, 1],
+            [1, 0, 0]
         );
 
         // Act
@@ -457,7 +540,7 @@ mod tests {
 
     #[test]
     #[rustfmt::skip::macros(array2D)]
-    fn test_get_neighbours_bottom_RHCorner() {
+    fn test_get_neighbours_bottom_rhcorner() {
         // Arrange
         let board_position = (6, 6);
         let board_layout = array2D!(
@@ -470,9 +553,9 @@ mod tests {
             [0, 0, 0, 0, 0, 1, 5]
         );
         let expected_result: Array2D = array2D!(
-            [2, 1, 0],
-            [1, 5, 0],
-            [0, 0, 0]
+            [2, 1, 1],
+            [1, 5, 1],
+            [1, 1, 1]
         );
 
         // Act
@@ -480,5 +563,514 @@ mod tests {
 
         // Assert
         assert_eq!(expected_result, neighbours);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_evaluate_neighbours() {
+        // Arrange
+        let board_position = (3, 2);
+        let neighbours = array2D!(
+            [0, 0, 0],
+            [1, 5, 0],
+            [0, 0, 0]
+        );
+        let mut expected_result: Vec<(usize, usize)> = Vec::new();
+        expected_result.push((2, 2));
+        expected_result.push((3, 3));
+        expected_result.push((4, 2));
+
+        // Act
+        let other_holes = evaluate_neighbours(board_position, neighbours);
+
+        // Assert
+        assert_eq!(expected_result, other_holes);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_1_hole_on_edge() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 0, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_1_hole_in_middle() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_2_holes_on_edge() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_2_holes_in_middle() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 1, 0, 1, 0],
+            [1, 1, 1, 1, 0, 0, 0],
+            [1, 1, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_3_holes_horizontal_on_edge() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [0, 0, 0, 1, 0, 1, 1],
+            [1, 1, 1, 1, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_3_holes_vertical_on_edge() {
+        // Arrange
+        let board_layout = array2D!(
+            [0, 1, 0, 0, 0, 0, 1],
+            [0, 1, 0, 0, 0, 0, 1],
+            [0, 1, 0, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_3_holes_horizontal_in_middle() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 1, 1, 0],
+            [1, 1, 1, 1, 0, 1, 0],
+            [0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_3_holes_lshape_on_edge() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 0, 1],
+            [0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 1, 1, 1],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_3_holes_lshape_in_middle() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 0, 1, 1, 1, 1],
+            [1, 0, 0, 1, 0, 0, 1],
+            [1, 1, 1, 1, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_4_holes_square_shape_on_edge() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [0, 0, 1, 1, 1, 1, 0],
+            [0, 0, 1, 1, 0, 0, 0],
+            [1, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_4_holes_square_shape_in_corner() {
+        // Arrange
+        let board_layout = array2D!(
+            [0, 0, 1, 0, 0, 0, 1],
+            [0, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_4_holes_square_shape_in_middle() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 1, 1, 1, 0],
+            [1, 0, 0, 1, 0, 0, 0],
+            [1, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_4_holes_horizontal_in_middle() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 0, 1, 0],
+            [1, 1, 1, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_valid_holes() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 0, 1, 0],
+            [1, 0, 0, 1, 1, 1, 0],
+            [1, 1, 1, 1, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(false, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_piece_valid_invalid_translation_count() {
+        // Arrange
+        let board_layout = array2D!(
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1]
+        );
+        let board_model = BoardModel {day: 21, month: 5, board_layout };
+        let board_position = (0, 0);
+        let mut puzzle_piece = PieceModel::new(
+            "2x4 Tee.".to_string(),
+            array2D!(
+                [0, 0, 1, 0],
+                [1, 1, 1, 1]
+            ),
+            4,
+            true,
+        );
+        puzzle_piece.next_unique_orientation();
+
+        // Act
+        let is_piece_valid = board_model.is_piece_valid(board_position, puzzle_piece);
+
+        // Assert
+        assert_eq!(false, is_piece_valid);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_piece_valid_piece_over_side() {
+        // Arrange
+        let board_layout = array2D!(
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1]
+        );
+        let board_model = BoardModel {day: 21, month: 5, board_layout };
+        let board_position = (3, 4);
+        let mut puzzle_piece = PieceModel::new(
+            "2x4 Tee.".to_string(),
+            array2D!(
+                [0, 0, 1, 0],
+                [1, 1, 1, 1]
+            ),
+            4,
+            true,
+        );
+
+        // Act
+        let is_piece_valid = board_model.is_piece_valid(board_position, puzzle_piece);
+
+        // Assert
+        assert_eq!(false, is_piece_valid);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_piece_valid_piece_over_bottom() {
+        // Arrange
+        let board_layout = array2D!(
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1]
+        );
+        let board_model = BoardModel {day: 21, month: 5, board_layout };
+        let board_position = (6, 0);
+        let puzzle_piece = PieceModel::new(
+            "2x4 Tee.".to_string(),
+            array2D!(
+                [0, 0, 1, 0],
+                [1, 1, 1, 1]
+            ),
+            4,
+            true,
+        );
+
+        // Act
+        let is_piece_valid = board_model.is_piece_valid(board_position, puzzle_piece);
+
+        // Assert
+        assert_eq!(false, is_piece_valid);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_piece_valid_piece_overlaps_piece() {
+        // Arrange
+        let board_layout = array2D!(
+        [1, 1, 1, 1, 0, 0, 1],
+        [1, 1, 1, 1, 0, 0, 1],
+        [1, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1]
+        );
+        let board_model = BoardModel {day: 21, month: 5, board_layout };
+        let board_position = (1, 2);
+        let puzzle_piece = PieceModel::new(
+            "2x4 Tee.".to_string(),
+            array2D!(
+                [0, 0, 1, 0],
+                [1, 1, 1, 1]
+            ),
+            4,
+            true,
+        );
+
+        // Act
+        let is_piece_valid = board_model.is_piece_valid(board_position, puzzle_piece);
+
+        // Assert
+        assert_eq!(false, is_piece_valid);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_piece_valid_piece_leaves_unreachable_hole() {
+        // Arrange
+        let board_layout = array2D!(
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1]
+        );
+        let board_model = BoardModel {day: 21, month: 5, board_layout };
+        let board_position = (0, 0);
+        let puzzle_piece = PieceModel::new(
+            "2x3 End Hole".to_string(),
+            array2D!(
+                [0, 1, 1],
+                [1, 1, 1]
+            ),
+            3,
+            true,
+        );
+
+        // Act
+        let is_piece_valid = board_model.is_piece_valid(board_position, puzzle_piece);
+
+        // Assert
+        assert_eq!(false, is_piece_valid);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_piece_valid_piece_valid() {
+        // Arrange
+        let board_layout = array2D!(
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1]
+        );
+        let board_model = BoardModel {day: 21, month: 5, board_layout };
+        let board_position = (0, 1);
+        let puzzle_piece = PieceModel::new(
+            "2x3 End Hole".to_string(),
+            array2D!(
+                [0, 1, 1],
+                [1, 1, 1]
+            ),
+            3,
+            true,
+        );
+
+        // Act
+        let is_piece_valid = board_model.is_piece_valid(board_position, puzzle_piece);
+
+        // Assert
+        assert_eq!(true, is_piece_valid);
     }
 }
