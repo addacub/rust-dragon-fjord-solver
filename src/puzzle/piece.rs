@@ -1,3 +1,5 @@
+use crate::array2D;
+
 use super::super::utils::array_2d::{Array2D, Axes};
 
 /// A valid orientation and board position of a puzzle piece.
@@ -72,6 +74,15 @@ impl PieceModel {
             translation_exhausted: false,
             is_used: false,
         }
+    }
+
+    /// Returns an immutable reference to the current piece orientation
+    pub fn current_orientation(&self) -> &Array2D {
+        &self.current_orientation
+    }
+
+    pub fn translation_count(&self) -> usize {
+        self.translation_count
     }
 
     /// Rotates the puzzle piece model it is called on by 90 degrees anti-clockwise.
@@ -163,6 +174,86 @@ impl PieceModel {
     //TODO - revisit recursion and how to handle
 }
 
+#[rustfmt::skip::macros(array2D)]
+pub fn create_piece_models() -> [PieceModel; 8] {
+    [
+        PieceModel::new(
+            "2x3 No Hole".to_string(),
+            array2D!(
+                [1, 1, 1],
+                [1, 1, 1]
+            ),
+            2,
+            false,
+        ),
+        PieceModel::new(
+            "2x3 Middle Hole".to_string(),
+            array2D!(
+                [1, 0, 1],
+                [1, 1, 1]
+            ),
+            3,
+            false,
+        ),
+        PieceModel::new(
+            "2x3 End Hole".to_string(),
+            array2D!(
+                [1, 1, 0],
+                [1, 1, 1]
+            ),
+            3,
+            true,
+        ),
+        PieceModel::new(
+            "2x4 Zig Zag".to_string(),
+            array2D!(
+                [0, 0, 1, 1],
+                [1, 1, 1, 0]
+            ),
+            3,
+            true,
+        ),
+        PieceModel::new(
+            "2x4 Tee.".to_string(),
+            array2D!(
+                [0, 0, 1, 0],
+                [1, 1, 1, 1]
+            ),
+            4,
+            true,
+        ),
+        PieceModel::new(
+            "2x4 L".to_string(),
+            array2D!(
+                [0, 0, 0, 1],
+                [1, 1, 1, 1]
+            ),
+            4,
+            true,
+        ),
+        PieceModel::new(
+            "3x3 Zig Zag".to_string(),
+            array2D!(
+                [1, 0, 0],
+                [1, 1, 1],
+                [0, 0, 1]
+            ),
+            2,
+            true,
+        ),
+        PieceModel::new(
+            "3x3 L".to_string(),
+            array2D!(
+                [1, 0, 0],
+                [1, 0, 0],
+                [1, 1, 1]
+            ),
+            4,
+            false,
+        ),
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -240,13 +331,10 @@ mod tests {
             true,
         );
 
-        println!("{}\n", piece.current_orientation);
-
         // ACt
         let mut i = 0;
         while i < 8 {
             piece.change_orientation();
-            println!("{}\n", piece.current_orientation);
             i += 1;
         }
 
