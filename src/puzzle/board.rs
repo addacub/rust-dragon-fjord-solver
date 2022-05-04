@@ -23,17 +23,15 @@ fn create_empty_calendar() -> Array2D {
 }
 
 pub struct BoardModel {
-    day: usize,
-    month: usize,
     board_layout: Array2D,
+    history: RecursiveBoardHistory,
 }
 
 impl BoardModel {
-    pub fn new(day: usize, month: usize) -> BoardModel {
+    pub fn new(day: u8, month: u8) -> BoardModel {
         BoardModel {
-            day,
-            month,
             board_layout: initialise_calendar_layout(day, month, create_empty_calendar()),
+            history: RecursiveBoardHistory::new(),
         }
     }
 
@@ -42,11 +40,15 @@ impl BoardModel {
     /// # Arguments
     /// * `board_pos` - A tuple of the row and column position in which to place the puzzle piece
     /// * `piece_model` - The model of the puzzle piece in the current orientation to be placed onto the board.
-    pub fn is_piece_valid(&self, board_position: (usize, usize), piece_model: PieceModel) -> bool {
+    pub fn is_piece_valid(
+        &self,
+        board_position: (usize, usize),
+        piece_model: &mut PieceModel,
+    ) -> bool {
         let (row, col) = board_position;
         // Check if translated board position (to take into account for spaces in puzzle piece)
         // is within bounds of the board.
-        if piece_model.translation_count() > col {
+        if piece_model.get_translation_count() > col {
             return false;
         }
 
@@ -56,11 +58,12 @@ impl BoardModel {
             || col + piece_model.current_orientation().shape().cols > self.board_layout.shape().cols
         {
             return false;
+        } else {
+            piece_model.set_board_position(board_position);
         }
 
         // Check if piece will overlap with an existing piece
-        let new_board_layout =
-            self.board_layout.clone() + place_piece_on_board((row, col), &piece_model);
+        let new_board_layout = self.board_layout.clone() + place_piece_on_board(piece_model);
         if new_board_layout.data().contains(&2) {
             return false;
         }
@@ -74,24 +77,36 @@ impl BoardModel {
         true
     }
 
-    fn generate_memento(&self) -> Box<Memento> {
-        Box::new(Memento::new(self.board_layout.clone()))
+    pub fn add_piece_to_board(&mut self, piece_model: &mut PieceModel) {
+        let piece_on_board = place_piece_on_board(piece_model);
+        self.board_layout = self.board_layout.clone() + piece_on_board;
     }
 
-    fn restore_from_memento(&mut self, memento: Memento) {
+    /// Returns a immutable reference to the board layout.
+    pub fn get_board_layout(&self) -> &Array2D {
+        &self.board_layout
+    }
+
+    pub fn generate_memento(&mut self) {
+        self.history
+            .add_memento(Box::new(BoardMemento::new(self.board_layout.clone())))
+    }
+
+    pub fn restore_from_memento(&mut self) {
+        let memento = self.history.get_memento();
         self.board_layout = memento.get_state();
     }
 }
 
 /// Initialises the calender
-fn initialise_calendar_layout(day: usize, month: usize, mut empty_layout: Array2D) -> Array2D {
+fn initialise_calendar_layout(day: u8, month: u8, mut empty_layout: Array2D) -> Array2D {
     // Set day
     let (row, col) = get_calendar_position(day, 2, 6, 7);
-    empty_layout.set((row, col), 1);
+    empty_layout.set((row as usize, col as usize), 1);
 
     // Set month
     let (row, col) = get_calendar_position(month, 0, 5, 6);
-    empty_layout.set((row, col), 1);
+    empty_layout.set((row as usize, col as usize), 1);
 
     empty_layout
 }
@@ -103,12 +118,7 @@ fn initialise_calendar_layout(day: usize, month: usize, mut empty_layout: Array2
 /// `start_row` - The start row of days or months on the calendar.
 /// `end-col` - The last valid column. Note, the length of a month row is shorter due to the board layout
 /// `divisor` - The length of the rows.
-fn get_calendar_position(
-    calendar_entry: usize,
-    start_row: usize,
-    end_col: usize,
-    divisor: usize,
-) -> (usize, usize) {
+fn get_calendar_position(calendar_entry: u8, start_row: u8, end_col: u8, divisor: u8) -> (u8, u8) {
     let quotient = calendar_entry / divisor;
     let remainder = calendar_entry % divisor;
 
@@ -136,6 +146,23 @@ pub fn next_board_position(board_layout: &Array2D) -> (usize, usize) {
     panic!("Unable to find an empty board position.");
 }
 
+pub fn get_all_empty_positions(board_layout: &Array2D) -> Vec<(usize, usize)> {
+    let mut empty_positions: Vec<(usize, usize)> = Vec::new();
+
+    for (index, &item) in board_layout.data().iter().enumerate() {
+        if item == 0 {
+            let empty_position = (
+                index / board_layout.shape().cols,
+                index % board_layout.shape().cols,
+            );
+
+            empty_positions.push(empty_position);
+        }
+    }
+
+    empty_positions
+}
+
 /// Checks if board is complete.
 /// * If complete, the board layout should contain only values of 1.
 /// * An incomplete board will contain values of 0.
@@ -156,14 +183,8 @@ pub fn is_board_complete(board_layout: &Array2D) -> bool {
 ///
 /// # Panics!
 /// If the specified board position results in the puzzle piece going outside of the board's bounds.
-pub fn place_piece_on_board(board_position: (usize, usize), piece_model: &PieceModel) -> Array2D {
-    let (row, col) = board_position;
-    // Check matrix is within bounds of the board for given board position
-    if row + piece_model.current_orientation().shape().rows - 1 > 6
-        || col + piece_model.current_orientation().shape().cols - 1 > 6
-    {
-        panic!("Attempted to place a piece on the board at a position that would cause the piece to go outside the bounds of the board.");
-    }
+fn place_piece_on_board(piece_model: &PieceModel) -> Array2D {
+    let (row, col) = piece_model.get_board_position().unwrap();
 
     // Create an empty board
     let mut piece_on_board = Array2D::new(Shape { rows: 7, cols: 7 }, vec![0; 7 * 7]);
@@ -182,6 +203,8 @@ pub fn place_piece_on_board(board_position: (usize, usize), piece_model: &PieceM
 
 /// Determines if current layout contains any unreachable holes.
 /// * A unreachable hole cannot be filled by a puzzle piece and indicates a dead solution branch.
+/// * If there are more than 5 adjacent holes, next board position is reachable.
+/// * If there are less than 5 adjacent holes, next board position is unreachable and current board layout is invalid.
 fn is_unreachable_holes(board_layout: &Array2D) -> bool {
     // Test if there are any holes first
     if is_board_complete(&board_layout) {
@@ -189,57 +212,40 @@ fn is_unreachable_holes(board_layout: &Array2D) -> bool {
         return false;
     }
 
-    let board_position = next_board_position(board_layout);
-    let tested_holes: Vec<(usize, usize)> = Vec::new();
-    let mut other_holes: Vec<(usize, usize)> = Vec::new();
-    other_holes.push(board_position.clone());
+    let empty_positions = get_all_empty_positions(board_layout);
 
-    unreachable_hole_recursive_helper(board_position, &board_layout, other_holes, tested_holes)
-}
+    for board_position in empty_positions {
+        let mut tested_holes: Vec<(usize, usize)> = Vec::new();
+        let mut other_holes: Vec<(usize, usize)> = Vec::new();
+        other_holes.push(board_position.clone());
+    
+        loop {
+            let mut more_holes: Vec<(usize, usize)> = Vec::new();
 
-/// Recursivley calls self to determine if next board position is unreachable.
-/// * If there are more than 5 adjacent holes, next board position is reachable.
-/// * If there are less than 5 adjacent holes, next board position is unreachable and current board layout is invalid.
-///
-/// # Arguments
-/// * `board_position` - A tuple `(usize, usize)` which specifies the row and column being evaluated.
-/// * `board_layout` - An `Array2D` of the current board layout being evaluated.
-/// * `other_holes` - A `vec<(usize, usize)>` of adjacent holes which are to be tested.
-/// * `tested_holes` - A `vec<(usize, usize)>` of adjacent holes which have been tested.
-fn unreachable_hole_recursive_helper(
-    board_position: (usize, usize),
-    board_layout: &Array2D,
-    mut other_holes: Vec<(usize, usize)>,
-    mut tested_holes: Vec<(usize, usize)>,
-) -> bool {
-    let mut more_holes: Vec<(usize, usize)> = Vec::new();
+            for hole in &other_holes {
+                if !tested_holes.contains(hole) {
+                    let neighbours = get_neighbours(hole.clone(), board_layout.clone());
+                    more_holes.append(&mut evaluate_neighbours(hole.clone(), neighbours));
+                    tested_holes.push(hole.clone());
+                }
+            }
 
-    for hole in &other_holes {
-        if !tested_holes.contains(hole) {
-            let neighbours = get_neighbours(hole.clone(), board_layout.clone());
-            more_holes.append(&mut evaluate_neighbours(hole.clone(), neighbours));
-            tested_holes.push(hole.clone());
+            other_holes.append(&mut more_holes);
+            other_holes.sort();
+            other_holes.dedup();
+
+            if tested_holes.len() > 5 {
+                // Tested more than 5 adjacent holes which means hole isn't unreachable
+                break
+            } else if tested_holes.len() == other_holes.len() {
+                // Current position is unreachable. Piece is invalid - no need to keep testing
+                return true;
+            }
         }
     }
 
-    other_holes.append(&mut more_holes);
-    other_holes.sort();
-    other_holes.dedup();
-
-    if tested_holes.len() > 5 {
-        // Tested more than 5 adjacent holes which means hole isn't unreachable
-        return false;
-    } else if tested_holes.len() == other_holes.len() {
-        // Tested all holes which is less than 5. Hole is unreachable.
-        return true;
-    } else {
-        return unreachable_hole_recursive_helper(
-            board_position,
-            board_layout,
-            other_holes,
-            tested_holes,
-        );
-    }
+    // All empty board positins were tested and not unreachable
+    return false
 }
 
 /// Returns a matrix of adjacent neighbours at the specified board position.
@@ -439,7 +445,7 @@ mod tests {
     #[rustfmt::skip::macros(array2D)]
     fn test_add_piece_to_board() {
         // Arrange
-        let piece = PieceModel::new(
+        let mut piece = PieceModel::new(
             "2x4 Zig Zag".to_string(),
             array2D!(
                 [0, 0, 1, 1],
@@ -459,9 +465,10 @@ mod tests {
             [0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0]
         );
+        piece.set_board_position(board_position);
 
         // Act
-        let piece_on_board = place_piece_on_board(board_position, &piece);
+        let piece_on_board = place_piece_on_board(&mut piece);
 
         // Assert
         assert_eq!(expected_result, piece_on_board);
@@ -471,7 +478,7 @@ mod tests {
     #[should_panic]
     fn test_add_piece_to_board_invalid() {
         // Arrange
-        let piece = PieceModel::new(
+        let mut piece = PieceModel::new(
             "2x4 Zig Zag".to_string(),
             array2D!([0, 0, 1, 1], [1, 1, 1, 0]),
             3,
@@ -479,9 +486,10 @@ mod tests {
         );
 
         let board_position = (2, 4);
+        piece.set_board_position(board_position);
 
         // Act & Assert
-        let _ = place_piece_on_board(board_position, &piece);
+        let _ = place_piece_on_board(&mut piece);
     }
 
     #[test]
@@ -617,6 +625,27 @@ mod tests {
             [1, 1, 1, 1, 1, 1, 1],
             [1, 0, 1, 1, 1, 1, 0],
             [1, 1, 1, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(true, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_1_hole_in_diagonal_hole() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 0, 1, 1],
+            [0, 0, 0, 0, 1, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 1, 1, 1, 1]
@@ -894,7 +923,10 @@ mod tests {
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 1, 1, 1, 1]
         );
-        let board_model = BoardModel {day: 21, month: 5, board_layout };
+        let board_model = BoardModel {
+            board_layout,
+            history: RecursiveBoardHistory::new(),
+        };
         let board_position = (0, 0);
         let mut puzzle_piece = PieceModel::new(
             "2x4 Tee.".to_string(),
@@ -908,7 +940,7 @@ mod tests {
         puzzle_piece.next_unique_orientation();
 
         // Act
-        let is_piece_valid = board_model.is_piece_valid(board_position, puzzle_piece);
+        let is_piece_valid = board_model.is_piece_valid(board_position, &mut puzzle_piece);
 
         // Assert
         assert_eq!(false, is_piece_valid);
@@ -927,7 +959,10 @@ mod tests {
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 1, 1, 1, 1]
         );
-        let board_model = BoardModel {day: 21, month: 5, board_layout };
+        let board_model = BoardModel {
+            board_layout,
+            history: RecursiveBoardHistory::new(),
+        };
         let board_position = (3, 4);
         let mut puzzle_piece = PieceModel::new(
             "2x4 Tee.".to_string(),
@@ -940,7 +975,7 @@ mod tests {
         );
 
         // Act
-        let is_piece_valid = board_model.is_piece_valid(board_position, puzzle_piece);
+        let is_piece_valid = board_model.is_piece_valid(board_position, &mut puzzle_piece);
 
         // Assert
         assert_eq!(false, is_piece_valid);
@@ -959,9 +994,12 @@ mod tests {
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 1, 1, 1, 1]
         );
-        let board_model = BoardModel {day: 21, month: 5, board_layout };
+        let board_model = BoardModel {
+            board_layout,
+            history: RecursiveBoardHistory::new(),
+        };
         let board_position = (6, 0);
-        let puzzle_piece = PieceModel::new(
+        let mut puzzle_piece = PieceModel::new(
             "2x4 Tee.".to_string(),
             array2D!(
                 [0, 0, 1, 0],
@@ -972,7 +1010,7 @@ mod tests {
         );
 
         // Act
-        let is_piece_valid = board_model.is_piece_valid(board_position, puzzle_piece);
+        let is_piece_valid = board_model.is_piece_valid(board_position, &mut puzzle_piece);
 
         // Assert
         assert_eq!(false, is_piece_valid);
@@ -991,9 +1029,12 @@ mod tests {
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 1, 1, 1, 1]
         );
-        let board_model = BoardModel {day: 21, month: 5, board_layout };
+        let board_model = BoardModel {
+            board_layout,
+            history: RecursiveBoardHistory::new(),
+        };
         let board_position = (1, 2);
-        let puzzle_piece = PieceModel::new(
+        let mut puzzle_piece = PieceModel::new(
             "2x4 Tee.".to_string(),
             array2D!(
                 [0, 0, 1, 0],
@@ -1004,7 +1045,7 @@ mod tests {
         );
 
         // Act
-        let is_piece_valid = board_model.is_piece_valid(board_position, puzzle_piece);
+        let is_piece_valid = board_model.is_piece_valid(board_position, &mut puzzle_piece);
 
         // Assert
         assert_eq!(false, is_piece_valid);
@@ -1023,9 +1064,12 @@ mod tests {
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 1, 1, 1, 1]
         );
-        let board_model = BoardModel {day: 21, month: 5, board_layout };
+        let board_model = BoardModel {
+            board_layout,
+            history: RecursiveBoardHistory::new(),
+        };
         let board_position = (0, 0);
-        let puzzle_piece = PieceModel::new(
+        let mut puzzle_piece = PieceModel::new(
             "2x3 End Hole".to_string(),
             array2D!(
                 [0, 1, 1],
@@ -1036,7 +1080,7 @@ mod tests {
         );
 
         // Act
-        let is_piece_valid = board_model.is_piece_valid(board_position, puzzle_piece);
+        let is_piece_valid = board_model.is_piece_valid(board_position, &mut puzzle_piece);
 
         // Assert
         assert_eq!(false, is_piece_valid);
@@ -1055,9 +1099,12 @@ mod tests {
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 1, 1, 1, 1]
         );
-        let board_model = BoardModel {day: 21, month: 5, board_layout };
+        let board_model = BoardModel {
+            board_layout,
+            history: RecursiveBoardHistory::new(),
+        };
         let board_position = (0, 1);
-        let puzzle_piece = PieceModel::new(
+        let mut puzzle_piece = PieceModel::new(
             "2x3 End Hole".to_string(),
             array2D!(
                 [0, 1, 1],
@@ -1068,7 +1115,7 @@ mod tests {
         );
 
         // Act
-        let is_piece_valid = board_model.is_piece_valid(board_position, puzzle_piece);
+        let is_piece_valid = board_model.is_piece_valid(board_position, &mut puzzle_piece);
 
         // Assert
         assert_eq!(true, is_piece_valid);

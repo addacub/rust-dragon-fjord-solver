@@ -1,36 +1,34 @@
-use core::slice;
-
 use super::array_2d::Array2D;
 
-pub struct RecursiveHistory {
-    history: Vec<Box<Memento>>,
+pub struct RecursiveBoardHistory {
+    history: Vec<Box<BoardMemento>>,
 }
 
-impl RecursiveHistory {
-    pub fn new() -> RecursiveHistory {
-        RecursiveHistory {
+impl RecursiveBoardHistory {
+    pub fn new() -> RecursiveBoardHistory {
+        RecursiveBoardHistory {
             history: Vec::new(),
         }
     }
 
-    fn add_memento(&mut self, memento: Box<Memento>) {
+    pub fn add_memento(&mut self, memento: Box<BoardMemento>) {
         self.history.push(memento);
     }
 
-    fn get_memento(&mut self) -> Box<Memento> {
+    pub fn get_memento(&mut self) -> Box<BoardMemento> {
         self.history.pop().unwrap()
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Memento {
+pub struct BoardMemento {
     backup: Array2D,
 }
 
-impl Memento {
+impl BoardMemento {
     /// Creates a `Memento` of the current state of the `BoardModel` it is called on.
-    pub fn new(backup: Array2D) -> Memento {
-        Memento { backup }
+    pub fn new(backup: Array2D) -> BoardMemento {
+        BoardMemento { backup }
     }
 
     pub fn get_state(self) -> Array2D {
@@ -46,7 +44,7 @@ mod tests {
     #[test]
     fn get_memento_state() {
         // Arrange
-        let memento = Memento {
+        let memento = BoardMemento {
             backup: array2D!([1, 2, 3], [1, 2, 3], [1, 2, 3]),
         };
         let expected_result = array2D!([1, 2, 3], [1, 2, 3], [1, 2, 3]);
@@ -61,11 +59,11 @@ mod tests {
     #[test]
     fn test_add_memento() {
         // Arrange
-        let memento = Box::new(Memento {
+        let memento = Box::new(BoardMemento {
             backup: array2D!([1, 2, 3], [1, 2, 3], [1, 2, 3]),
         });
-        let mut recursive_history = RecursiveHistory::new();
-        let expected_result = Box::new(Memento {
+        let mut recursive_history = RecursiveBoardHistory::new();
+        let expected_result = Box::new(BoardMemento {
             backup: array2D!([1, 2, 3], [1, 2, 3], [1, 2, 3]),
         });
 
@@ -80,11 +78,11 @@ mod tests {
     #[test]
     fn test_get_memento() {
         // Arrange
-        let memento = Box::new(Memento {
+        let memento = Box::new(BoardMemento {
             backup: array2D!([1, 2, 3], [1, 2, 3], [1, 2, 3]),
         });
-        let mut recursive_history = RecursiveHistory::new();
-        let expected_result = Box::new(Memento {
+        let mut recursive_history = RecursiveBoardHistory::new();
+        let expected_result = Box::new(BoardMemento {
             backup: array2D!([1, 2, 3], [1, 2, 3], [1, 2, 3]),
         });
 

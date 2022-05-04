@@ -3,22 +3,23 @@ use crate::array2D;
 use super::super::utils::array_2d::{Array2D, Axes};
 
 /// A valid orientation and board position of a puzzle piece.
-pub struct PiecePosition {
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
+pub struct PieceBoardPosition {
     name: String,
     board_position: (usize, usize),
     orientation: Array2D,
 }
 
-impl PiecePosition {
-    pub fn name(&self) -> &str {
+impl PieceBoardPosition {
+    pub fn get_name(&self) -> &str {
         self.name.as_str()
     }
 
-    pub fn board_position(&self) -> (usize, usize) {
+    pub fn get_board_position(&self) -> (usize, usize) {
         self.board_position
     }
 
-    pub fn orienation(&self) -> Array2D {
+    pub fn get_orienation(&self) -> Array2D {
         self.orientation.clone()
     }
 }
@@ -81,8 +82,14 @@ impl PieceModel {
         &self.current_orientation
     }
 
-    pub fn translation_count(&self) -> usize {
+    /// Returns a copy of the current pieces translation count
+    pub fn get_translation_count(&self) -> usize {
         self.translation_count
+    }
+
+    /// TODO - Remove after testing
+    pub fn get_name(&self) -> &str {
+        self.name.as_str()
     }
 
     /// Rotates the puzzle piece model it is called on by 90 degrees anti-clockwise.
@@ -132,7 +139,11 @@ impl PieceModel {
     /// If there are zeros in the top row of the piece, the piece will be
     /// incrementally translated until a value of 1 is at the board position.
     fn translate(&mut self) {
-        if self.current_orientation.get(0, self.translation_count) == 1 {
+        if self
+            .current_orientation
+            .get(0, self.translation_count as usize)
+            == 1
+        {
             self.translation_exhausted = true;
         } else {
             self.translation_count += 1;
@@ -162,16 +173,40 @@ impl PieceModel {
         self.is_used = is_used;
     }
 
+    /// Returns a immutable reference to the `is_used` field
+    pub fn is_used(&self) -> &bool {
+        &self.is_used
+    }
+
+    /// Returns an immutable reference to the `is_exhausted` field
+    pub fn is_exhausted(&self) -> &bool {
+        &self.orientation_exhausted
+    }
+
+    /// Sets the board position of puzzle piece and `is_used` flag to true.
+    pub fn set_board_position(&mut self, board_position: (usize, usize)) {
+        let (row, col) = board_position;
+
+        // Adjust column for piece translation
+        let col = col - self.translation_count;
+
+        self.board_position = Some((row, col));
+        self.is_used = true;
+    }
+
+    /// Returns an immutable reference to the piece's board position
+    pub fn get_board_position(&self) -> &Option<(usize, usize)> {
+        &self.board_position
+    }
+
     /// Returns a `PiecePosition` object from the piece model is it called on.
-    pub fn get_piece_position(&self) -> PiecePosition {
-        PiecePosition {
+    pub fn get_piece_board_position(&self) -> PieceBoardPosition {
+        PieceBoardPosition {
             name: self.name.clone(),
             board_position: self.board_position.unwrap(),
             orientation: self.current_orientation.clone(),
         }
     }
-
-    //TODO - revisit recursion and how to handle
 }
 
 #[rustfmt::skip::macros(array2D)]
