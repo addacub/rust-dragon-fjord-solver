@@ -1,3 +1,6 @@
+use core::fmt;
+use std::usize;
+
 use crate::array2D;
 
 use super::super::utils::array_2d::{Array2D, Axes};
@@ -43,7 +46,6 @@ pub struct PieceModel {
     translation_count: usize,
     has_flipped: bool,
     orientation_exhausted: bool,
-    translation_exhausted: bool,
     is_used: bool,
 }
 
@@ -72,7 +74,6 @@ impl PieceModel {
             translation_count: 0,
             has_flipped: false,
             orientation_exhausted: false,
-            translation_exhausted: false,
             is_used: false,
         }
     }
@@ -112,7 +113,6 @@ impl PieceModel {
         self.translation_count = 0;
         self.has_flipped = false;
         self.orientation_exhausted = false;
-        self.translation_exhausted = false;
     }
 
     /// Change the orientation of the puzzle piece model it is called on to return a unique new orientation.
@@ -139,25 +139,24 @@ impl PieceModel {
     /// If there are zeros in the top row of the piece, the piece will be
     /// incrementally translated until a value of 1 is at the board position.
     fn translate(&mut self) {
-        if self
-            .current_orientation
-            .get(0, self.translation_count as usize)
-            == 1
-        {
-            self.translation_exhausted = true;
-        } else {
+        if !self.is_translation_exhausted() {
             self.translation_count += 1;
         }
+    }
+
+    fn is_translation_exhausted(&self) -> bool {
+        self.current_orientation
+            .get(0, self.translation_count as usize)
+            == 1
     }
 
     /// Translates and or rotates the puzzle piece model it is called on
     /// to get the next unique orienation of the piece.
     pub fn next_unique_orientation(&mut self) {
-        if self.translation_exhausted {
+        if self.is_translation_exhausted() {
             self.change_orientation();
 
             // Reset translation information
-            self.translation_exhausted = false;
             self.translation_count = 0;
         } else {
             self.translate();
@@ -184,14 +183,18 @@ impl PieceModel {
     }
 
     /// Sets the board position of puzzle piece and `is_used` flag to true.
-    pub fn set_board_position(&mut self, board_position: (usize, usize)) {
-        let (row, col) = board_position;
+    pub fn set_board_position(&mut self, board_position: Option<(usize, usize)>) {
+        match board_position {
+            Some(position) => {
+                let (row, col) = position;
 
-        // Adjust column for piece translation
-        let col = col - self.translation_count;
+                // Adjust column for piece translation
+                let col = col - self.translation_count;
 
-        self.board_position = Some((row, col));
-        self.is_used = true;
+                self.board_position = Some((row, col));
+            }
+            None => self.board_position = None,
+        }
     }
 
     /// Returns an immutable reference to the piece's board position
@@ -207,6 +210,107 @@ impl PieceModel {
             orientation: self.current_orientation.clone(),
         }
     }
+}
+
+impl fmt::Display for PieceModel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Piece: {}\n", self.get_name())?;
+        match self.get_board_position() {
+            Some(positoin) => {
+                write!(f, "Board Positon: ({}, {})\n", positoin.0, positoin.1)?;
+            }
+            None => write!(f, "Board Position: (_, _)\n")?,
+        }
+
+        write!(f, "Current orientation:\n")?;
+
+        return write!(f, "{}", self.current_orientation);
+    }
+}
+
+#[rustfmt::skip::macros(array2D)]
+pub fn create_test_piece_models() -> [PieceModel; 8] {
+    [
+        PieceModel::new(
+            "2x3 No Hole".to_string(),
+            array2D!(
+                [1, 1, 1],
+                [1, 1, 1]
+            ),
+            2,
+            false,
+        ),
+        PieceModel::new(
+            "2x3 End Hole".to_string(),
+            array2D!(
+                [1, 1],
+                [1, 1],
+                [1, 0]
+            ),
+            3,
+            true,
+        ),
+        PieceModel::new(
+            "3x3 Zig Zag".to_string(),
+            array2D!(
+                [1, 0, 0],
+                [1, 1, 1],
+                [0, 0, 1]
+            ),
+            2,
+            true,
+        ),
+        PieceModel::new(
+            "2x3 Middle Hole".to_string(),
+            array2D!(
+                [1, 0, 1],
+                [1, 1, 1]
+            ),
+            3,
+            false,
+        ),
+        PieceModel::new(
+            "2x4 Tee".to_string(),
+            array2D!(
+                [0, 1],
+                [0, 1],
+                [1, 1],
+                [0, 1]
+            ),
+            4,
+            true,
+        ),
+        PieceModel::new(
+            "2x4 L".to_string(),
+            array2D!(
+                [1, 0],
+                [1, 0],
+                [1, 0],
+                [1, 1]
+            ),
+            4,
+            true,
+        ),
+        PieceModel::new(
+            "3x3 L".to_string(),
+            array2D!(
+                [1, 0, 0],
+                [1, 0, 0],
+                [1, 1, 1]
+            ),
+            4,
+            false,
+        ),
+        PieceModel::new(
+            "2x4 Zig Zag".to_string(),
+            array2D!(
+                [1, 1, 1, 0],
+                [0, 0, 1, 1]
+            ),
+            3,
+            true,
+        ),
+    ]
 }
 
 #[rustfmt::skip::macros(array2D)]
@@ -415,6 +519,6 @@ mod tests {
 
         // Assert
         assert_eq!(piece.translation_count, 2);
-        assert_eq!(piece.translation_exhausted, true);
+        assert_eq!(piece.is_translation_exhausted(), true);
     }
 }

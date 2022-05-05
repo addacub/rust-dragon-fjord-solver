@@ -36,9 +36,9 @@ fn print_solution(index: usize, solution_set: &Vec<Vec<PieceBoardPosition>>) {
     let solution = &solution_set[index];
     for piece in solution {
         println!(
-            "Place {} at position (row, col) = {:#?} with the following orientation:",
+            "Place {} at position (row, col) = ({}, {}) with the following orientation:\n",
             piece.get_name(),
-            piece.get_board_position()
+            piece.get_board_position().0, piece.get_board_position().1
         );
         println!("{}", piece.get_orienation());
         println!("\n");

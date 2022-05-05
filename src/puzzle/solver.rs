@@ -43,8 +43,8 @@ impl SolverSingleThreaded {
         let mut solver_history: Vec<usize> = Vec::new();
 
         loop {
-            // Flag to determine if for loop is broken out of
-            let mut has_broken_out = false;
+            // Flag to determine when to go back to previous state
+            let mut restore_last_state = true;
 
             // Get next available board position
             let board_position = board::next_board_position(self.board.get_board_layout());
@@ -52,11 +52,15 @@ impl SolverSingleThreaded {
             // Get next eligible piece to be placed
             'piece_loop: for index in start_index..self.get_pieces().len() {
                 let piece = &mut self.pieces[index];
+
                 if !piece.is_used() {
                     while !piece.is_exhausted() {
+                        if piece.get_name() == "3x3 L".to_string() {
+                            // println!("Break");
+                        }
                         if self.board.is_piece_valid(board_position, piece) {
-                            // Set piece board_position
-                            piece.set_board_position(board_position);
+                            // Set flag to indicate piece is used
+                            piece.set_used(true);
 
                             // Save current board state
                             self.board.generate_memento();
@@ -67,14 +71,16 @@ impl SolverSingleThreaded {
                             // Save current state of solver
                             solver_history.push(index);
 
-                            // Update flage
-                            has_broken_out = true;
+                            // Update loop flag
+                            restore_last_state = false;
 
-                            println!("{}\n", piece.current_orientation());
+                            println!("{}\n", piece);
                             println!("{}\n", self.board.get_board_layout());
 
                             break 'piece_loop;
                         } else {
+                            println!("{}\n", piece);
+                            piece.set_board_position(None);
                             piece.next_unique_orientation();
                         }
                     }
@@ -94,20 +100,26 @@ impl SolverSingleThreaded {
 
                 // Append solution to solution set
                 self.solution_set.push(solution);
+
+                // Change flag to indicate to undo last move
+                restore_last_state = true;
             }
 
             // If hasn't broken out, has exhausted all possibilities for current loop.
             // Return to previous solver state or break from loop if finished searching.
-            if !has_broken_out {
+            if restore_last_state {
                 match solver_history.pop() {
                     Some(x) => {
                         start_index = x;
 
                         // return to previous board position
                         self.board.restore_from_memento();
+                        println!("{}\n", self.pieces[start_index]);
+                        println!("{}\n", self.board.get_board_layout());
 
                         // Remove flag indicating piece is used
                         self.pieces[start_index].set_used(false);
+                        self.pieces[start_index].set_board_position(None);
 
                         // Get next unique orientation of piece
                         self.pieces[start_index].next_unique_orientation();

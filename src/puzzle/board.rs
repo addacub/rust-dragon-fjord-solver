@@ -45,21 +45,24 @@ impl BoardModel {
         board_position: (usize, usize),
         piece_model: &mut PieceModel,
     ) -> bool {
-        let (row, col) = board_position;
+        let (mut row, mut col) = board_position;
         // Check if translated board position (to take into account for spaces in puzzle piece)
         // is within bounds of the board.
         if piece_model.get_translation_count() > col {
             return false;
+        } else {
+            // Adjust board position to take into account translation
+            piece_model.set_board_position(Some(board_position));
+            (row, col) = piece_model.get_board_position().unwrap();
         }
 
         // Check if puzzle piece is within bounds of the board if placed.
         if row + piece_model.current_orientation().shape().rows - 1
             > self.board_layout.shape().rows - 1
-            || col + piece_model.current_orientation().shape().cols > self.board_layout.shape().cols
+            || col + piece_model.current_orientation().shape().cols - 1
+                > self.board_layout.shape().cols - 1
         {
             return false;
-        } else {
-            piece_model.set_board_position(board_position);
         }
 
         // Check if piece will overlap with an existing piece
@@ -68,6 +71,7 @@ impl BoardModel {
             return false;
         }
 
+        // println!("{}", new_board_layout);
         // Check if piece will leave any holes
         if is_unreachable_holes(&new_board_layout) {
             return false;
@@ -218,7 +222,7 @@ fn is_unreachable_holes(board_layout: &Array2D) -> bool {
         let mut tested_holes: Vec<(usize, usize)> = Vec::new();
         let mut other_holes: Vec<(usize, usize)> = Vec::new();
         other_holes.push(board_position.clone());
-    
+
         loop {
             let mut more_holes: Vec<(usize, usize)> = Vec::new();
 
@@ -234,9 +238,9 @@ fn is_unreachable_holes(board_layout: &Array2D) -> bool {
             other_holes.sort();
             other_holes.dedup();
 
-            if tested_holes.len() > 5 {
-                // Tested more than 5 adjacent holes which means hole isn't unreachable
-                break
+            if tested_holes.len() > 4 {
+                // Tested more than 4 adjacent holes which means hole isn't unreachable
+                break;
             } else if tested_holes.len() == other_holes.len() {
                 // Current position is unreachable. Piece is invalid - no need to keep testing
                 return true;
@@ -245,7 +249,7 @@ fn is_unreachable_holes(board_layout: &Array2D) -> bool {
     }
 
     // All empty board positins were tested and not unreachable
-    return false
+    return false;
 }
 
 /// Returns a matrix of adjacent neighbours at the specified board position.
@@ -465,7 +469,7 @@ mod tests {
             [0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0]
         );
-        piece.set_board_position(board_position);
+        piece.set_board_position(Some(board_position));
 
         // Act
         let piece_on_board = place_piece_on_board(&mut piece);
@@ -486,7 +490,7 @@ mod tests {
         );
 
         let board_position = (2, 4);
-        piece.set_board_position(board_position);
+        piece.set_board_position(Some(board_position));
 
         // Act & Assert
         let _ = place_piece_on_board(&mut piece);
@@ -901,6 +905,27 @@ mod tests {
             [1, 1, 1, 1, 0, 1, 0],
             [0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 1, 1, 1, 1]
+        );
+
+        // Act
+        let is_unreachable = is_unreachable_holes(&board_layout);
+
+        // Assert
+        assert_eq!(false, is_unreachable);
+    }
+
+    #[test]
+    #[rustfmt::skip::macros(array2D)]
+    fn test_valid_holes_real_example() {
+        // Arrange
+        let board_layout = array2D!(
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 0, 0, 0, 1, 1],
+            [1, 1, 1, 1, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1]
         );
 
         // Act
