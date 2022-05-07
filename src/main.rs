@@ -1,45 +1,49 @@
-use dfsolver::{
-    array2D,
-    utils::array_2d::{self, Axes},
-};
+use std::time::SystemTime;
+
+use dfsolver::puzzle::{piece::PieceBoardPosition, solver::SolverSingleThreaded};
 
 fn main() {
-    // let mut matrix: array_2d::Array2D = array2D!([1, 2, 3], [4, 5, 6], [7, 8, 9]);
+    let day = 31;
+    let month = 1;
 
-    // println!("{}\n", matrix);
-    // matrix.flip(Axes::X);
-    // println!("{}\n", matrix);
+    let start_time = SystemTime::now();
+    let mut dragon = SolverSingleThreaded::new(day, month);
+    dragon.find_solution_set(0);
+    let end_time = SystemTime::now();
+    println!(
+        "Program took {:?} to execute.",
+        end_time.duration_since(start_time).ok().unwrap()
+    );
+    println!(
+        "{} solution(s) were found.",
+        dragon.get_solution_set().len()
+    );
+    dragon.remove_duplicates();
+    println!(
+        "{} unique solution(s) were found.",
+        dragon.get_solution_set().len()
+    );
+    if dragon.get_solution_set().len() > 0 {
+        print_solution(0, dragon.get_solution_set());
+    }
+}
 
-    // let mut matrix: array_2d::Array2D = array2D!([1, 2, 3], [4, 5, 6], [7, 8, 9]);
-    // matrix.flip(Axes::Y);
-    // println!("{}\n", matrix);
-
-    // let mut matrix: array_2d::Array2D = array2D!([1, 2, 3], [4, 5, 6], [7, 8, 9]);
-    // matrix.transpose();
-    // println!("{}\n", matrix);
-
-    // let mut matrix: array_2d::Array2D = array2D!([1, 2, 3], [4, 5, 6], [7, 8, 9]);
-    // matrix.transpose();
-    // matrix.transpose();
-    // println!("{}\n", matrix);
-
-    let mut matrix: array_2d::Array2D = array2D![[1, 2], [3, 4]];
-    matrix.rotate90(0);
-    println!("{}\n", matrix);
-
-    let mut matrix: array_2d::Array2D = array2D![[1, 2], [3, 4]];
-    matrix.rotate90(-1);
-    println!("{}\n", matrix);
-
-    let mut matrix: array_2d::Array2D = array2D![[1, 2], [3, 4]];
-    matrix.rotate90(-2);
-    println!("{}\n", matrix);
-
-    let mut matrix: array_2d::Array2D = array2D![[1, 2], [3, 4]];
-    matrix.rotate90(-3);
-    println!("{}\n", matrix);
-
-    let mut matrix: array_2d::Array2D = array2D![[1, 2], [3, 4]];
-    matrix.rotate90(-4);
-    println!("{}\n", matrix);
+/// Print out the specified solution from the solution set
+fn print_solution(index: usize, solution_set: &Vec<Vec<PieceBoardPosition>>) {
+    println!(
+        "Solution {} of {} is shown below:",
+        index + 1,
+        solution_set.len()
+    );
+    let solution = &solution_set[index];
+    for piece in solution {
+        println!(
+            "Place {} at position (row, col) = ({}, {}) with the following orientation:\n",
+            piece.get_name(),
+            piece.get_board_position().0,
+            piece.get_board_position().1
+        );
+        println!("{}", piece.get_orienation());
+        println!("\n");
+    }
 }
