@@ -1,26 +1,18 @@
-use crate::utils::memento::RecursiveBoardHistory;
-
 use super::board::{self, BoardModel};
 use super::piece::{self, PieceBoardPosition, PieceModel};
 
 pub struct SolverSingleThreaded {
-    day: u8,
-    month: u8,
     pieces: [PieceModel; 8],
     board: BoardModel,
     solution_set: Vec<Vec<PieceBoardPosition>>,
-    recursive_history: RecursiveBoardHistory,
 }
 
 impl SolverSingleThreaded {
     pub fn new(day: u8, month: u8) -> SolverSingleThreaded {
         SolverSingleThreaded {
-            day,
-            month,
             pieces: piece::create_piece_models(),
             board: BoardModel::new(day, month),
             solution_set: Vec::new(),
-            recursive_history: RecursiveBoardHistory::new(),
         }
     }
 
@@ -55,9 +47,6 @@ impl SolverSingleThreaded {
 
                 if !piece.is_used() {
                     while !piece.is_exhausted() {
-                        if piece.get_name() == "3x3 L".to_string() {
-                            // println!("Break");
-                        }
                         if self.board.is_piece_valid(board_position, piece) {
                             // Set flag to indicate piece is used
                             piece.set_used(true);
@@ -74,13 +63,11 @@ impl SolverSingleThreaded {
                             // Update loop flag
                             restore_last_state = false;
 
-                            println!("{}\n", piece);
-                            println!("{}\n", self.board.get_board_layout());
+                            // Reset start_index
+                            start_index = 0;
 
                             break 'piece_loop;
                         } else {
-                            println!("{}\n", piece);
-                            piece.set_board_position(None);
                             piece.next_unique_orientation();
                         }
                     }
@@ -114,8 +101,6 @@ impl SolverSingleThreaded {
 
                         // return to previous board position
                         self.board.restore_from_memento();
-                        println!("{}\n", self.pieces[start_index]);
-                        println!("{}\n", self.board.get_board_layout());
 
                         // Remove flag indicating piece is used
                         self.pieces[start_index].set_used(false);

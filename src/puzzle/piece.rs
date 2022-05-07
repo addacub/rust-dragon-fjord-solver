@@ -88,7 +88,7 @@ impl PieceModel {
         self.translation_count
     }
 
-    /// TODO - Remove after testing
+    /// Returns a immutable reference to the piece's name.
     pub fn get_name(&self) -> &str {
         self.name.as_str()
     }
@@ -182,7 +182,7 @@ impl PieceModel {
         &self.orientation_exhausted
     }
 
-    /// Sets the board position of puzzle piece and `is_used` flag to true.
+    /// Sets the board position of puzzle piece.
     pub fn set_board_position(&mut self, board_position: Option<(usize, usize)>) {
         match board_position {
             Some(position) => {
@@ -237,7 +237,7 @@ pub fn create_test_piece_models() -> [PieceModel; 8] {
                 [1, 1, 1],
                 [1, 1, 1]
             ),
-            2,
+            1,
             false,
         ),
         PieceModel::new(
@@ -257,7 +257,7 @@ pub fn create_test_piece_models() -> [PieceModel; 8] {
                 [1, 1, 1],
                 [0, 0, 1]
             ),
-            2,
+            1,
             true,
         ),
         PieceModel::new(
@@ -277,18 +277,18 @@ pub fn create_test_piece_models() -> [PieceModel; 8] {
                 [1, 1],
                 [0, 1]
             ),
-            4,
+            3,
             true,
         ),
         PieceModel::new(
             "2x4 L".to_string(),
             array2D!(
+                [1, 1],
                 [1, 0],
                 [1, 0],
-                [1, 0],
-                [1, 1]
+                [1, 0]
             ),
-            4,
+            3,
             true,
         ),
         PieceModel::new(
@@ -298,7 +298,7 @@ pub fn create_test_piece_models() -> [PieceModel; 8] {
                 [1, 0, 0],
                 [1, 1, 1]
             ),
-            4,
+            3,
             false,
         ),
         PieceModel::new(
@@ -322,7 +322,7 @@ pub fn create_piece_models() -> [PieceModel; 8] {
                 [1, 1, 1],
                 [1, 1, 1]
             ),
-            2,
+            1,
             false,
         ),
         PieceModel::new(
@@ -358,7 +358,7 @@ pub fn create_piece_models() -> [PieceModel; 8] {
                 [0, 0, 1, 0],
                 [1, 1, 1, 1]
             ),
-            4,
+            3,
             true,
         ),
         PieceModel::new(
@@ -367,7 +367,7 @@ pub fn create_piece_models() -> [PieceModel; 8] {
                 [0, 0, 0, 1],
                 [1, 1, 1, 1]
             ),
-            4,
+            3,
             true,
         ),
         PieceModel::new(
@@ -377,7 +377,7 @@ pub fn create_piece_models() -> [PieceModel; 8] {
                 [1, 1, 1],
                 [0, 0, 1]
             ),
-            2,
+            1,
             true,
         ),
         PieceModel::new(
@@ -387,7 +387,7 @@ pub fn create_piece_models() -> [PieceModel; 8] {
                 [1, 0, 0],
                 [1, 1, 1]
             ),
-            4,
+            3,
             false,
         ),
     ]

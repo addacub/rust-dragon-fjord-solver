@@ -45,7 +45,7 @@ impl BoardModel {
         board_position: (usize, usize),
         piece_model: &mut PieceModel,
     ) -> bool {
-        let (mut row, mut col) = board_position;
+        let (row, mut col) = board_position;
         // Check if translated board position (to take into account for spaces in puzzle piece)
         // is within bounds of the board.
         if piece_model.get_translation_count() > col {
@@ -53,7 +53,7 @@ impl BoardModel {
         } else {
             // Adjust board position to take into account translation
             piece_model.set_board_position(Some(board_position));
-            (row, col) = piece_model.get_board_position().unwrap();
+            (_, col) = piece_model.get_board_position().unwrap();
         }
 
         // Check if puzzle piece is within bounds of the board if placed.
@@ -71,7 +71,6 @@ impl BoardModel {
             return false;
         }
 
-        // println!("{}", new_board_layout);
         // Check if piece will leave any holes
         if is_unreachable_holes(&new_board_layout) {
             return false;

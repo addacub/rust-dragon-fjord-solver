@@ -11,8 +11,8 @@ fn main() {
     dragon.find_solution_set(0);
     let end_time = SystemTime::now();
     println!(
-        "Program took {:#?} seconds to execute.",
-        end_time.duration_since(start_time)
+        "Program took {:?} to execute.",
+        end_time.duration_since(start_time).ok().unwrap()
     );
     println!(
         "{} solution(s) were found.",
@@ -23,14 +23,16 @@ fn main() {
         "{} unique solution(s) were found.",
         dragon.get_solution_set().len()
     );
-    print_solution(0, dragon.get_solution_set());
+    if dragon.get_solution_set().len() > 0 {
+        print_solution(0, dragon.get_solution_set());
+    }
 }
 
 /// Print out the specified solution from the solution set
 fn print_solution(index: usize, solution_set: &Vec<Vec<PieceBoardPosition>>) {
     println!(
         "Solution {} of {} is shown below:",
-        index,
+        index + 1,
         solution_set.len()
     );
     let solution = &solution_set[index];
@@ -38,7 +40,8 @@ fn print_solution(index: usize, solution_set: &Vec<Vec<PieceBoardPosition>>) {
         println!(
             "Place {} at position (row, col) = ({}, {}) with the following orientation:\n",
             piece.get_name(),
-            piece.get_board_position().0, piece.get_board_position().1
+            piece.get_board_position().0,
+            piece.get_board_position().1
         );
         println!("{}", piece.get_orienation());
         println!("\n");
