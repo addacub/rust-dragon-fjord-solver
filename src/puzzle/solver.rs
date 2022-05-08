@@ -8,7 +8,7 @@ pub struct SolverSingleThreaded {
 }
 
 impl SolverSingleThreaded {
-    pub fn new(day: u8, month: u8) -> SolverSingleThreaded {
+    pub fn new(day: usize, month: usize) -> SolverSingleThreaded {
         SolverSingleThreaded {
             pieces: piece::create_piece_models(),
             board: BoardModel::new(day, month),

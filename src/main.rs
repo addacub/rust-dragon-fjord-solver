@@ -1,18 +1,20 @@
-use std::time::SystemTime;
+use std::time::{SystemTime};
 
 use dfsolver::puzzle::{piece::PieceBoardPosition, solver::SolverSingleThreaded};
 
 fn main() {
-    let day = 31;
-    let month = 1;
+    let day = 8;
+    let month = 5;
 
     let start_time = SystemTime::now();
     let mut dragon = SolverSingleThreaded::new(day, month);
     dragon.find_solution_set(0);
     let end_time = SystemTime::now();
+    let duration = end_time.duration_since(start_time).ok().unwrap();
+
     println!(
         "Program took {:?} to execute.",
-        end_time.duration_since(start_time).ok().unwrap()
+        (duration.as_secs() as f64 + duration.subsec_nanos() as f64 * 1e-9).to_string()
     );
     println!(
         "{} solution(s) were found.",
