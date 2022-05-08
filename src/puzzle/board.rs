@@ -28,7 +28,7 @@ pub struct BoardModel {
 }
 
 impl BoardModel {
-    pub fn new(day: u8, month: u8) -> BoardModel {
+    pub fn new(day: usize, month: usize) -> BoardModel {
         BoardModel {
             board_layout: initialise_calendar_layout(day, month, create_empty_calendar()),
             history: RecursiveBoardHistory::new(),
@@ -102,7 +102,7 @@ impl BoardModel {
 }
 
 /// Initialises the calender
-fn initialise_calendar_layout(day: u8, month: u8, mut empty_layout: Array2D) -> Array2D {
+fn initialise_calendar_layout(day: usize, month: usize, mut empty_layout: Array2D) -> Array2D {
     // Set day
     let (row, col) = get_calendar_position(day, 2, 6, 7);
     empty_layout.set((row as usize, col as usize), 1);
@@ -121,7 +121,12 @@ fn initialise_calendar_layout(day: u8, month: u8, mut empty_layout: Array2D) -> 
 /// `start_row` - The start row of days or months on the calendar.
 /// `end-col` - The last valid column. Note, the length of a month row is shorter due to the board layout
 /// `divisor` - The length of the rows.
-fn get_calendar_position(calendar_entry: u8, start_row: u8, end_col: u8, divisor: u8) -> (u8, u8) {
+fn get_calendar_position(
+    calendar_entry: usize,
+    start_row: usize,
+    end_col: usize,
+    divisor: usize,
+) -> (usize, usize) {
     let quotient = calendar_entry / divisor;
     let remainder = calendar_entry % divisor;
 
