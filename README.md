@@ -1,7 +1,7 @@
 # rust-dragon-fjord-solver
 Solver for the Dragon Fjord A-Puzzle-A-Day re-written in Rust for the backend (tba for the front end).
 
-Uses a recursive function to find all solutions for the specified day and month using a "brute force" method. The backend will return a solution set (an array of all possible solutions) to the GUI which is then displayed to the user.
+Uses depth first search (implemented using a loop) to find all solutions for the specified day and month using a "brute force" method. The backend will return a solution set (an array of all possible solutions) to the GUI which is then displayed to the user.
 
 The solver contains piece information to prevent the solver from flipping or rotating pieces which have symmetry i.e. flipping / rotating piece results in the same shape being placed. This information prevents solver from placing and checking redundent pieces.
 
