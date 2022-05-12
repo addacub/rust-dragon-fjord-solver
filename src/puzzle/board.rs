@@ -252,7 +252,7 @@ fn is_unreachable_holes(board_layout: &Array2D) -> bool {
         }
     }
 
-    // All empty board positins were tested and not unreachable
+    // All empty board positions were tested and not unreachable
     return false;
 }
 
