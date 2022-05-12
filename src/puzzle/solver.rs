@@ -60,7 +60,7 @@ impl SolverSingleThreaded {
                             // Save current state of solver
                             solver_history.push(index);
 
-                            // Update loop flag
+                            // Set loop flag
                             restore_last_state = false;
 
                             // Reset start_index

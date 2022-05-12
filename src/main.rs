@@ -1,10 +1,10 @@
-use std::time::{SystemTime};
+use std::time::SystemTime;
 
 use dfsolver::puzzle::{piece::PieceBoardPosition, solver::SolverSingleThreaded};
 
 fn main() {
-    let day = 8;
-    let month = 5;
+    let day = 31;
+    let month = 1;
 
     let start_time = SystemTime::now();
     let mut dragon = SolverSingleThreaded::new(day, month);

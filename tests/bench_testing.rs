@@ -6,7 +6,7 @@ use dfsolver::puzzle::solver::SolverSingleThreaded;
 #[ignore]
 /// Runs through all combinations of days and months
 fn bench_test() {
-    let file_name = "initial_benchmarking".to_string();
+    let file_name = "optimised_is_unreachable_hole".to_string();
 
     let months = [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
