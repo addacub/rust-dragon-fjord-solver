@@ -221,33 +221,37 @@ fn is_unreachable_holes(board_layout: &Array2D) -> bool {
     }
 
     let empty_positions = get_all_empty_positions(board_layout);
+    let mut tested_positions: Vec<(usize, usize)> = Vec::new();
 
     for board_position in empty_positions {
-        let mut tested_holes: Vec<(usize, usize)> = Vec::new();
-        let mut other_holes: Vec<(usize, usize)> = Vec::new();
-        other_holes.push(board_position.clone());
+        if !tested_positions.contains(&board_position) {
+            let mut tested_holes: Vec<(usize, usize)> = Vec::new();
+            let mut other_holes: Vec<(usize, usize)> = Vec::new();
+            other_holes.push(board_position.clone());
 
-        loop {
-            let mut more_holes: Vec<(usize, usize)> = Vec::new();
+            loop {
+                let mut more_holes: Vec<(usize, usize)> = Vec::new();
 
-            for hole in &other_holes {
-                if !tested_holes.contains(hole) {
-                    let neighbours = get_neighbours(hole.clone(), board_layout.clone());
-                    more_holes.append(&mut evaluate_neighbours(hole.clone(), neighbours));
-                    tested_holes.push(hole.clone());
+                for hole in &other_holes {
+                    if !tested_holes.contains(hole) {
+                        let neighbours = get_neighbours(hole.clone(), board_layout.clone());
+                        more_holes.append(&mut evaluate_neighbours(hole.clone(), neighbours));
+                        tested_holes.push(hole.clone());
+                    }
                 }
-            }
 
-            other_holes.append(&mut more_holes);
-            other_holes.sort();
-            other_holes.dedup();
+                other_holes.append(&mut more_holes);
+                other_holes.sort();
+                other_holes.dedup();
 
-            if tested_holes.len() > 4 {
-                // Tested more than 4 adjacent holes which means hole isn't unreachable
-                break;
-            } else if tested_holes.len() == other_holes.len() {
-                // Current position is unreachable. Piece is invalid - no need to keep testing
-                return true;
+                if tested_holes.len() > 4 {
+                    // Tested more than 4 adjacent holes which means hole isn't unreachable
+                    tested_positions.extend(tested_holes);
+                    break;
+                } else if tested_holes.len() == other_holes.len() {
+                    // Current position is unreachable. Piece is invalid - no need to keep testing
+                    return true;
+                }
             }
         }
     }
