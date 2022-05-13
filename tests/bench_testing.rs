@@ -1,12 +1,12 @@
 use std::{fs::File, io::Write, ops::Range, path::PathBuf, time::SystemTime};
 
-use dfsolver::puzzle::solver::SolverSingleThreaded;
+use dfsolver::puzzle::solver::{SolverSingleThreaded, SolverMultiThreaded};
 
 #[test]
 #[ignore]
 /// Runs through all combinations of days and months
 fn bench_test() {
-    let file_name = "optimised_is_unreachable_hole".to_string();
+    let file_name = "one_layer_of_multithreading".to_string();
 
     let months = [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
@@ -19,8 +19,8 @@ fn bench_test() {
         for day in (Range { start: 1, end: 32 }) {
             println!("Finding solution for {} of {}", day, month);
             let start_time = SystemTime::now();
-            let mut dragon = SolverSingleThreaded::new(day, index + 1);
-            dragon.find_solution_set(0);
+            let mut dragon = SolverMultiThreaded::new(day, index + 1);
+            dragon.find_solution_set();
             let end_time = SystemTime::now();
 
             let duration = end_time.duration_since(start_time).ok().unwrap();

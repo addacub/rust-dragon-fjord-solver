@@ -1,5 +1,6 @@
 use super::array_2d::Array2D;
 
+#[derive(Clone)]
 pub struct RecursiveBoardHistory {
     history: Vec<Box<BoardMemento>>,
 }
@@ -20,7 +21,7 @@ impl RecursiveBoardHistory {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct BoardMemento {
     backup: Array2D,
 }
