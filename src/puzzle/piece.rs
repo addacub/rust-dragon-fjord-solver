@@ -30,6 +30,7 @@ impl PieceBoardPosition {
 /// Model of a puzzle piece that can be placed on board.
 /// Contains information required to determine all unique
 /// piece orientations.
+#[derive(Clone)]
 pub struct PieceModel {
     // Arguments
     name: String,

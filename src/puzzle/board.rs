@@ -22,6 +22,7 @@ fn create_empty_calendar() -> Array2D {
     )
 }
 
+#[derive(Clone)]
 pub struct BoardModel {
     board_layout: Array2D,
     history: RecursiveBoardHistory,
