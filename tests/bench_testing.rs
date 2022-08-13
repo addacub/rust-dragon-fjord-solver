@@ -6,7 +6,7 @@ use dfsolver::puzzle::solver::{SolverMultiThreaded, SolverSingleThreaded};
 #[ignore]
 /// Runs through all combinations of days and months
 fn bench_test() {
-    let file_name = "one_layer_of_multithreading".to_string();
+    let file_name = "fully_translating".to_string();
 
     let months = [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",

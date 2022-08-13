@@ -10,7 +10,7 @@ fn main() {
     let month = 5;
 
     let start_time = SystemTime::now();
-    let mut dragon = SolverMultiThreaded::new(day, month);
+    let mut dragon = SolverSingleThreaded::new(day, month);
     dragon.find_solution_set();
     let end_time = SystemTime::now();
     let duration = end_time.duration_since(start_time).ok().unwrap();
